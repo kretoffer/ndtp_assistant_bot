@@ -37,6 +37,20 @@ async def cmd_start(message: Message, config: Config, state: FSMContext):
         )
 
 
+@start_router.message(Command("edit_name"))
+async def cmd_edit_name(message: Message, config: Config, state: FSMContext):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO users (id) VALUES (?)", (message.from_user.id,))
+    conn.commit()
+
+    await state.set_state(Registration.waiting_for_name)
+    await message.answer(
+        config.messages.enter_name,
+        reply_markup=cancel_keyboard
+    )
+
+
 @start_router.callback_query(lambda c: c.data == "cancel_registration")
 async def cancel_handler(callback_query: CallbackQuery, state: FSMContext, config: Config):
     await state.clear()
