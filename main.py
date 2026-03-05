@@ -2,6 +2,7 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import load_config
 from database import get_db_connection, init_db, close_db_connection
@@ -9,11 +10,17 @@ from handlers import (
     start_router
     )
 
+from parser import init_parser, parse_and_compare
+
 logging.basicConfig(level=logging.INFO)
+
+async def per_minute_activity():
+    await parse_and_compare()
 
 async def on_startup(dispatcher: Dispatcher):
     get_db_connection(dispatcher['config'].db_path)
     init_db()
+    await init_parser(dispatcher['config'].old_data_path)
 
 async def on_shutdown(dispatcher: Dispatcher):
     close_db_connection()
@@ -30,6 +37,10 @@ async def main():
     dp.shutdown.register(on_shutdown)
 
     dp.include_router(start_router)
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(per_minute_activity, 'interval', minutes=1)
+    scheduler.start()
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
