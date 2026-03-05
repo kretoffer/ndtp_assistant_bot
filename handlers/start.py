@@ -27,7 +27,7 @@ async def cmd_start(message: Message, config: Config, state: FSMContext):
         cursor.execute("INSERT OR IGNORE INTO users (id) VALUES (?)", (message.from_user.id,))
     conn.commit()
 
-    if user[1] and user[2]:
+    if user and user[1] and user[2]:
         await message.answer(config.messages.start_phrase)
     else:
         await state.set_state(Registration.waiting_for_name)
