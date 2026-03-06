@@ -6,7 +6,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import load_config
 from database import get_db_connection, init_db, close_db_connection
-from handlers import start_router
+from handlers import (
+    start_router,
+    schedule_router
+)
 
 from parser import init_parser, parse_and_compare
 
@@ -35,6 +38,7 @@ async def main():
     dp.shutdown.register(on_shutdown)
 
     dp.include_router(start_router)
+    dp.include_router(schedule_router)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(

@@ -171,6 +171,10 @@ async def parse_and_compare(bot: Bot):
         await notify_all_users(bot, changes)
 
 
+def get_old_data() -> list:
+    return old_data
+
+
 if __name__ == "__main__":
 
     async def main():
