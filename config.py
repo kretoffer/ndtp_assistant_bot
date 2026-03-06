@@ -17,6 +17,7 @@ class Config:
     messages: Messages
     db_path: str = "data/database.db"
     old_data_path = "data/old_data.json"
+    parsing_interval = 6
 
 def load_config() -> Config:
     load_dotenv()

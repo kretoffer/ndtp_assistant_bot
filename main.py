@@ -14,9 +14,6 @@ from parser import init_parser, parse_and_compare
 
 logging.basicConfig(level=logging.INFO)
 
-async def per_minute_activity():
-    await parse_and_compare()
-
 async def on_startup(dispatcher: Dispatcher):
     get_db_connection(dispatcher['config'].db_path)
     init_db()
@@ -39,7 +36,7 @@ async def main():
     dp.include_router(start_router)
 
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(per_minute_activity, 'interval', minutes=1)
+    scheduler.add_job(parse_and_compare, 'interval', args=(bot,), seconds=config.parsing_interval)
     scheduler.start()
 
     await bot.delete_webhook(drop_pending_updates=True)

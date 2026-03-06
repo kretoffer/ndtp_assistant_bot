@@ -29,3 +29,9 @@ def init_db():
         )
     """)
     conn.commit()
+
+def get_all_users():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users")
+    return cursor.fetchall()

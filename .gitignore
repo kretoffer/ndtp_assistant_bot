@@ -209,3 +209,4 @@ __marimo__/
 # Databases
 *.db
 *.sqlite3
+data
