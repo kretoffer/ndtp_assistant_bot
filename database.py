@@ -3,6 +3,7 @@ import os
 
 _connection = None
 
+
 def get_db_connection(db_path="data/database.db"):
     global _connection
     if _connection is None:
@@ -11,11 +12,13 @@ def get_db_connection(db_path="data/database.db"):
         _connection.row_factory = sqlite3.Row
     return _connection
 
+
 def close_db_connection():
     global _connection
     if _connection is not None:
         _connection.close()
         _connection = None
+
 
 def init_db():
     conn = get_db_connection()
@@ -29,6 +32,7 @@ def init_db():
         )
     """)
     conn.commit()
+
 
 def get_all_users():
     conn = get_db_connection()

@@ -30,6 +30,8 @@ async def init_parser(old_data_path: str):
 
 
 def save_old_data():
+    if not _old_data_path:
+        raise FileExistsError("No old data path")
     with open(_old_data_path, "w", encoding="utf-8") as f:
         json.dump({"schedule": old_data}, f, indent=4, ensure_ascii=False)
 
@@ -39,14 +41,19 @@ async def parse() -> list:
     soup = BeautifulSoup(data, "lxml")
 
     schedule = []
-    
+
     for panel in soup.find_all("div", class_="fusion-panel"):
+        docs = {}
         panel_heading = panel.find("div", class_="panel-heading")
-        columns = panel_heading.find_all("div", class_=["fusion-layout-column", "fusion_builder_column_inner"])
-        
+        if not panel_heading:
+            continue
+        columns = panel_heading.find_all(
+            "div", class_=["fusion-layout-column", "fusion_builder_column_inner"]
+        )
+
         name = ""
         date = ""
-        
+
         if len(columns) > 0:
             name_tag = columns[0].find("h1")
             if name_tag:
@@ -62,24 +69,29 @@ async def parse() -> list:
         if panel_body:
             feed_tag = panel_body.find("p")
             if feed_tag and "Прием заявок" in feed_tag.text:
-                feed = feed_tag.text.strip().replace("Прием заявок", "").strip().split("\n")[0]
+                feed = (
+                    feed_tag.text.strip()
+                    .replace("Прием заявок", "")
+                    .strip()
+                    .split("\n")[0]
+                )
 
-            docs = {}
             for doc_link in panel_body.find_all("a"):
                 doc_name = doc_link.text.strip()
-                doc_href = doc_link["href"]
-                if not doc_href.startswith("http"):
+                doc_href_raw = doc_link.get("href")
+                if isinstance(doc_href_raw, list):
+                    doc_href = doc_href_raw[0]
+                else:
+                    doc_href = doc_href_raw
+
+                if doc_href and not doc_href.startswith("http"):
                     doc_href = "https://ndtp.by" + doc_href
-                docs[doc_name] = doc_href
-        
+                if doc_href:
+                    docs[doc_name] = doc_href
+
         if name:
-            schedule.append({
-                "name": name,
-                "date": date,
-                "feed": feed,
-                "docs": docs
-            })
-    
+            schedule.append({"name": name, "date": date, "feed": feed, "docs": docs})
+
     return schedule
 
 
@@ -89,14 +101,10 @@ def compare(new_data: list):
     if old_data == new_data:
         return None
 
-    changes = {
-        "new_shifts": [],
-        "removed_shifts": [],
-        "modified_shifts": []
-    }
+    changes = {"new_shifts": [], "removed_shifts": [], "modified_shifts": []}
 
-    old_shifts_dict = {shift['name']: shift for shift in old_data}
-    new_shifts_dict = {shift['name']: shift for shift in new_data}
+    old_shifts_dict = {shift["name"]: shift for shift in old_data}
+    new_shifts_dict = {shift["name"]: shift for shift in new_data}
 
     old_shift_names = set(old_shifts_dict.keys())
     new_shift_names = set(new_shifts_dict.keys())
@@ -125,26 +133,27 @@ def compare(new_data: list):
         removed_docs = old_docs - new_docs
 
         if added_docs:
-            modifications["added_docs"] = {doc: new_shift["docs"][doc] for doc in added_docs}
+            modifications["added_docs"] = {
+                doc: new_shift["docs"][doc] for doc in added_docs
+            }
 
         if removed_docs:
-            modifications["removed_docs"] = {doc: old_shift["docs"][doc] for doc in removed_docs}
+            modifications["removed_docs"] = {
+                doc: old_shift["docs"][doc] for doc in removed_docs
+            }
 
         doc_url_changes = {}
         for doc_name in old_docs & new_docs:
             if old_shift["docs"][doc_name] != new_shift["docs"][doc_name]:
                 doc_url_changes[doc_name] = {
                     "from": old_shift["docs"][doc_name],
-                    "to": new_shift["docs"][doc_name]
+                    "to": new_shift["docs"][doc_name],
                 }
         if doc_url_changes:
             modifications["doc_url_changes"] = doc_url_changes
 
         if modifications:
-            changes["modified_shifts"].append({
-                "name": name,
-                "changes": modifications
-            })
+            changes["modified_shifts"].append({"name": name, "changes": modifications})
 
     if any(changes.values()):
         old_data = new_data
@@ -152,6 +161,7 @@ def compare(new_data: list):
         return changes
 
     return None
+
 
 async def parse_and_compare(bot: Bot):
     new_data = await parse()
@@ -161,8 +171,10 @@ async def parse_and_compare(bot: Bot):
         await notify_all_users(bot, changes)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     async def main():
         result = await parse()
         print(json.dumps(result, indent=4, ensure_ascii=False))
+
     asyncio.run(main())

@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
+
 @dataclass
 class Messages:
     start_phrase: str = "Привет! Я ндтп ассистент, могу сообщать о изменениях в списках, искать вас в списках, помочь написать проект и ответить на вопросы"
@@ -11,6 +12,7 @@ class Messages:
     registration_successful: str = "Теперь буду тебя знать"
     error_occured: str = "Произошла ошибка, попробуй еще раз"
 
+
 @dataclass
 class Config:
     token: str
@@ -19,10 +21,14 @@ class Config:
     old_data_path = "data/old_data.json"
     parsing_interval = 6
 
+
 def load_config() -> Config:
     load_dotenv()
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        raise ValueError("Haven't BOT_TOKEN in .env")
     return Config(
-        token=os.getenv("BOT_TOKEN"),
+        token=token,
         messages=Messages(),
-        db_path=os.getenv("DB_PATH", "data/database.db")
+        db_path=os.getenv("DB_PATH", "data/database.db"),
     )

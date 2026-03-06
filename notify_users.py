@@ -32,7 +32,9 @@ def generate_message_text(changes):
             if "added_docs" in modifications:
                 text += " - Добавлены документы:\n"
                 for name, file_link in modifications["added_docs"].items():
-                    text += f'<a href="{html.escape(file_link)}">{html.escape(name)}</a>\n'
+                    text += (
+                        f'<a href="{html.escape(file_link)}">{html.escape(name)}</a>\n'
+                    )
     return text
 
 
@@ -42,14 +44,18 @@ async def notify_all_users(bot: Bot, changes):
     logging.info(f"Starting to send message to {len(users)} users.")
 
     for user in users:
-        user_id = user['id']
+        user_id = user["id"]
         try:
-            await bot.send_message(user_id, text, parse_mode="HTML", disable_web_page_preview=True)
+            await bot.send_message(
+                user_id, text, parse_mode="HTML", disable_web_page_preview=True
+            )
         except TelegramForbiddenError:
             logging.warning(f"User {user_id} has blocked the bot. Cannot send message.")
         except TelegramBadRequest as e:
             logging.error(f"Failed to send message to user {user_id}: {e}")
         except Exception as e:
-            logging.error(f"An unexpected error occurred while sending message to user {user_id}: {e}")
+            logging.error(
+                f"An unexpected error occurred while sending message to user {user_id}: {e}"
+            )
 
     logging.info("Finished sending messages to all users.")
