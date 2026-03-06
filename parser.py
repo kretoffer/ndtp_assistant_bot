@@ -1,15 +1,21 @@
-import asyncio
 import aiohttp
 import json
 from bs4 import BeautifulSoup
+import io
+import re
+from pypdf import PdfReader
 import logging
 from aiogram import Bot
+from typing import List
 
 from notify_users import notify_all_users
 
 
 _old_data_path = None
 old_data = []
+
+DOC_NAME = "Положение об образовательной смене"
+FIRST_DISTRICT = "Авиакосмические технологии"
 
 
 async def fetch(url):
@@ -175,10 +181,51 @@ def get_old_data() -> list:
     return old_data
 
 
-if __name__ == "__main__":
+async def parse_districts(id: int) -> dict:
+    url = old_data[id]["docs"][DOC_NAME]
 
-    async def main():
-        result = await parse()
-        print(json.dumps(result, indent=4, ensure_ascii=False))
+    logging.info(f"Found URL: {url}")
+    if not url:
+        return {}
 
-    asyncio.run(main())
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status != 200:
+                return {}
+            pdf_raw = await response.read()
+
+            pdf_file = io.BytesIO(pdf_raw)
+            reader = PdfReader(pdf_file)
+            text = ""
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text
+
+            # Clean up text. Remove newlines, collapse multiple spaces into one.
+            text = text.replace("\n", " ")
+            text = re.sub(r"\s+", " ", text)
+
+            # Insert space between a closing parenthesis and a capital letter,
+            # to separate concatenated items.
+            text = re.sub(r"\)(?=[А-Я])", ") ", text)
+
+            regex = r"([0-9\.]*\s*[А-Яа-я][^()]*?)\s*\((направление\s*–\s*[^)]+)\)"
+
+            matches = re.findall(regex, text)
+
+            districts_str: List[str] = []
+            for match in matches:
+                name = match[0].strip()
+                name = re.sub(r"^[0-9\.\s]+", "", name)
+                direction = match[1].strip()
+                districts_str.append(f"{name} ({direction})")
+
+            districts = {}
+            for el in districts_str:
+                dist = el.replace(")", "").split(" (направление – ")
+                districts[dist[1]] = dist[0]
+
+            districts[FIRST_DISTRICT] = districts[FIRST_DISTRICT].split(": ")[2]
+
+            return districts
