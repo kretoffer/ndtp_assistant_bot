@@ -12,9 +12,17 @@ from notify_users import notify_all_users
 
 
 _old_data_path = None
+_districts_data_path = None
+_dopusheni_data_path = None
+_spiski_data_path = None
 old_data = []
+districts = {}
+dopusheni = {}
+spiski = {}
 
 DOC_NAME = "Положение об образовательной смене"
+SPISKI_DOPUSCHENNYH_START_WITH = "Списочный состав участников, допущенных ко второму этапу"
+SPISKI_START_WITH = "Списочный состав групп учащихся, зачисленных"
 FIRST_DISTRICT = "Авиакосмические технологии"
 
 
@@ -24,15 +32,25 @@ async def fetch(url):
             return await response.text()
 
 
-async def init_parser(old_data_path: str):
-    global _old_data_path, old_data
+async def init_parser(old_data_path: str, districts_data_path: str, dopusheni_data_path: str, spiski_data_path: str):
+    global _old_data_path, _districts_data_path, _dopusheni_data_path, _spiski_data_path,\
+            old_data, districts, dopusheni, spiski
     _old_data_path = old_data_path
+    _districts_data_path = districts_data_path
+    _dopusheni_data_path = dopusheni_data_path
+    _spiski_data_path = spiski_data_path
     try:
         with open(old_data_path, "r+", encoding="utf-8") as f:
             old_data = json.load(f)["schedule"]
     except FileNotFoundError:
         old_data = await parse()
         save_old_data()
+    try:
+        with open(districts_data_path, "r+", encoding="utf-8") as f:
+            districts = json.load(f)
+    except FileNotFoundError:
+        districts = await parse_all_districts()
+        save_districts_data()
 
 
 def save_old_data():
@@ -40,6 +58,27 @@ def save_old_data():
         raise FileExistsError("No old data path")
     with open(_old_data_path, "w", encoding="utf-8") as f:
         json.dump({"schedule": old_data}, f, indent=4, ensure_ascii=False)
+
+
+def save_dopusheni_data():
+    if not _dopusheni_data_path:
+        raise FileExistsError("No data path")
+    with open(_dopusheni_data_path, "w", encoding="utf-8") as f:
+        json.dump(dopusheni, f, indent=4, ensure_ascii=False)
+
+
+def save_spiski_data():
+    if not _spiski_data_path:
+        raise FileExistsError("No data path")
+    with open(_spiski_data_path, "w", encoding="utf-8") as f:
+        json.dump(spiski, f, indent=4, ensure_ascii=False)
+
+
+def save_districts_data():
+    if not _districts_data_path:
+        raise FileExistsError("No data path")
+    with open(_districts_data_path, "w", encoding="utf-8") as f:
+        json.dump(districts, f, indent=4, ensure_ascii=False)
 
 
 async def parse() -> list:
@@ -181,9 +220,7 @@ def get_old_data() -> list:
     return old_data
 
 
-async def parse_districts(id: int) -> dict:
-    url = old_data[id]["docs"][DOC_NAME]
-
+async def parse_district(url: str) -> dict:
     logging.info(f"Found URL: {url}")
     if not url:
         return {}
@@ -223,9 +260,25 @@ async def parse_districts(id: int) -> dict:
 
             districts = {}
             for el in districts_str:
-                dist = el.replace(")", "").split(" (направление – ")
-                districts[dist[1]] = dist[0]
+                dist = re.split(r"\s*\(\s*направление\s*–\s*", el.replace(")", ""))
+                if len(dist) > 1:
+                    districts[dist[1].strip()] = dist[0].strip()
 
-            districts[FIRST_DISTRICT] = districts[FIRST_DISTRICT].split(": ")[2]
+            if FIRST_DISTRICT in districts:
+                districts[FIRST_DISTRICT] = districts[FIRST_DISTRICT].split(": ")[2]
 
             return districts
+
+
+async def parse_all_districts() -> dict:
+    _districts = {}
+    for shift in old_data:
+        if DOC_NAME in shift["docs"]:
+            _districts[shift["name"]] = await parse_district(shift["docs"][DOC_NAME])
+    return _districts
+
+
+def get_districts(name: str | None = None):
+    if name:
+        return districts.get(name)
+    return districts

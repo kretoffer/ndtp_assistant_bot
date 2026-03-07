@@ -19,7 +19,12 @@ logging.basicConfig(level=logging.INFO)
 async def on_startup(dispatcher: Dispatcher):
     get_db_connection(dispatcher["config"].db_path)
     init_db()
-    await init_parser(dispatcher["config"].old_data_path)
+    await init_parser(
+        dispatcher["config"].old_data_path,
+        dispatcher["config"].districts_data_path,
+        dispatcher["config"].dopusheni_data_path,
+        dispatcher["config"].spiski_data_path
+    )
 
 
 async def on_shutdown(dispatcher: Dispatcher):
