@@ -8,7 +8,10 @@ APScheduler==3.11.2
 attrs==25.4.0
 beautifulsoup4==4.14.3
 certifi==2026.2.25
+cffi==2.0.0
 cfgv==3.5.0
+charset-normalizer==3.4.5
+cryptography==46.0.5
 distlib==0.4.0
 filelock==3.25.0
 frozenlist==1.8.0
@@ -18,11 +21,17 @@ lxml==6.0.2
 magic-filter==1.0.12
 multidict==6.7.1
 nodeenv==1.10.0
+pdfminer.six==20231228
+pdfplumber==0.11.0
+pillow==12.1.1
 platformdirs==4.9.4
 pre_commit==4.5.1
 propcache==0.4.1
+pycparser==3.0
 pydantic==2.12.5
 pydantic_core==2.41.5
+pypdf==4.2.0
+pypdfium2==5.5.0
 pyright==1.1.408
 python-discovery==1.1.0
 python-dotenv==1.2.2
@@ -34,4 +43,3 @@ typing_extensions==4.15.0
 tzlocal==5.3.1
 virtualenv==21.1.0
 yarl==1.23.0
-pypdf==4.2.0

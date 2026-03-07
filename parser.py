@@ -3,7 +3,7 @@ import json
 from bs4 import BeautifulSoup
 import io
 import re
-from pypdf import PdfReader
+import pdfplumber
 import logging
 from aiogram import Bot
 from typing import List
@@ -230,18 +230,20 @@ async def parse_district(url: str) -> dict:
             if response.status != 200:
                 return {}
             pdf_raw = await response.read()
-
             pdf_file = io.BytesIO(pdf_raw)
-            reader = PdfReader(pdf_file)
             text = ""
-            for page in reader.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text
+            try:
+                with pdfplumber.open(pdf_file) as pdf:
+                    for page in pdf.pages:
+                        page_text = page.extract_text(x_tolerance=2)
+                        if page_text:
+                            text += page_text + "\n"
+            except Exception as e:
+                logging.error(f"Failed to parse PDF with pdfplumber: {e}")
+                return {}
 
-            # Clean up text. Remove newlines, collapse multiple spaces into one.
-            text = text.replace("\n", " ")
-            text = re.sub(r"\s+", " ", text)
+            # Clean up text by splitting on any whitespace and rejoining with single spaces.
+            text = " ".join(text.split())
 
             # Insert space between a closing parenthesis and a capital letter,
             # to separate concatenated items.
@@ -264,7 +266,7 @@ async def parse_district(url: str) -> dict:
                 if len(dist) > 1:
                     districts[dist[1].strip()] = dist[0].strip()
 
-            if FIRST_DISTRICT in districts:
+            if FIRST_DISTRICT in districts and districts[FIRST_DISTRICT].count(": ") >= 2:
                 districts[FIRST_DISTRICT] = districts[FIRST_DISTRICT].split(": ")[2]
 
             return districts
