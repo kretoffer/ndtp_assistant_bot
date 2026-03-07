@@ -209,11 +209,14 @@ def compare(new_data: list):
 
 
 async def parse_and_compare(bot: Bot):
+    global districts
     new_data = await parse()
     changes = compare(new_data)
     logging.info(f"Changes: {changes}")
     if changes:
         await notify_all_users(bot, changes)
+        districts = await parse_all_districts()
+        save_districts_data()
 
 
 def get_old_data() -> list:
