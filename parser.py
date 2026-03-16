@@ -233,10 +233,6 @@ async def parse_and_compare(bot: Bot):
         save_districts_data()
 
 
-def get_old_data() -> list:
-    return old_data
-
-
 async def parse_district(url: str) -> dict:
     logging.info(f"Found URL: {url}")
     if not url:
@@ -437,7 +433,23 @@ async def parse_all_spiski(start_with: str, is_spiski = False):
     return new_dopusheni
 
 
+def get_old_data() -> list:
+    return old_data
+
+
 def get_districts(name: str | None = None):
     if name:
         return districts.get(name)
     return districts
+
+
+def get_dopusheni(name: str | None = None):
+    if name:
+        return dopusheni.get(name)
+    return dopusheni
+
+
+def get_spiski(name: str | None = None):
+    if name:
+        return spiski.get(name)
+    return spiski

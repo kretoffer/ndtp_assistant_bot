@@ -15,3 +15,10 @@ def get_schedule_keyboard():
     if row:
         keyboard_rows.append(row)
     return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
+
+
+def get_regions_keyboard(shift, keys: list):
+    markup = []
+    for i, region in enumerate(keys):
+        markup.append([InlineKeyboardButton(text=region, callback_data=f"spiski:{shift}:{i}")])
+    return InlineKeyboardMarkup(inline_keyboard=markup)
