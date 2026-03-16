@@ -29,6 +29,9 @@ async def cmd_start(message: Message, config: Config, state: FSMContext):
         cursor.execute(
             "INSERT OR IGNORE INTO users (id) VALUES (?)", (message.from_user.id,)
         )
+        cursor.execute(
+            "INSERT OR IGNORE INTO subscriptions (id, polozhenie, dopusheni, mesta_provedeniya, spiski) VALUES (?, 1, 1, 1, 1)", (message.from_user.id,)
+        )
     conn.commit()
 
     if user and user[1] and user[2]:

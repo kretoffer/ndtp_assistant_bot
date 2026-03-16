@@ -31,6 +31,16 @@ def init_db():
             surname TEXT
         )
     """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS subscriptions (
+            id INTEGER PRIMARY KEY,
+            polozhenie BOOLEAN NOT NULL DEFAULT 1,
+            dopusheni BOOLEAN NOT NULL DEFAULT 1,
+            mesta_provedeniya BOOLEAN NOT NULL DEFAULT 1,
+            spiski BOOLEAN NOT NULL DEFAULT 1
+        )
+    """)
     conn.commit()
 
 
@@ -57,3 +67,18 @@ def get_user_id_by_name(name, surname):
     if user:
         return user['id']
     return None
+
+
+def get_subscribers_by_topic(topic: str):
+    """
+    Возвращает id всех пользователей, для которых указанная тема рассылки активна.
+    """
+    allowed_topics = ['polozhenie', 'dopusheni', 'mesta_provedeniya', 'spiski']
+    if topic not in allowed_topics:
+        return []
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT id FROM subscriptions WHERE {topic} = 1")
+    users = cursor.fetchall()
+    return [user['id'] for user in users]

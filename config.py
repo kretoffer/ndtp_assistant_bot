@@ -7,12 +7,13 @@ from dotenv import load_dotenv
 class Messages:
     start_phrase: str = "Привет! Я ндтп ассистент, могу сообщать о изменениях в списках, искать вас в списках, помочь написать проект и ответить на вопросы\n\n"\
                         "Используйте /schedule чтобы посмотреть расписание\n"\
-                        "Используйте /follows чтобы настроить оповищения\n"
+                        "Используйте /subscriptions чтобы настроить оповищения\n"
     enter_name: str = "Введи свое имя и я буду сообщать тебе если увижу тебя в списках\nЕсли ты не хочешь вводить имя, то нажми отмена и тогда я тебе буду сообщать только о изменении календаря образовательных смен"
     enter_surname: str = "Теперь введи свою фамилию"
     action_canceled: str = "Действие отменено"
     registration_successful: str = "Теперь буду тебя знать"
     error_occured: str = "Произошла ошибка, попробуй еще раз"
+    subscriptions: str = "✅ - подписаны (вам будут приходить сообщения по этой теме)\n❌ - не подписаны (сообщения приходить не будут)\n\n<b>Ваши подписки на события:</b>"
 
 
 @dataclass
@@ -25,6 +26,12 @@ class Config:
     dopusheni_data_path = "data/dopusheni_data.json"
     spiski_data_path = "data/spiski_data.json"
     parsing_interval = 60
+    TOPIC_NAMES = {
+        "polozhenie": "Положение",
+        "dopusheni": "Допущенные к тестам",
+        "mesta_provedeniya": "Места проведения",
+        "spiski": "Поступившие",
+    }
 
 
 def load_config() -> Config:
