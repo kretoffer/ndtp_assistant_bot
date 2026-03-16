@@ -35,6 +35,8 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS subscriptions (
             id INTEGER PRIMARY KEY,
+            new_removed_shifts BOOLEAN NOT NULL DEFAULT 1,
+            dates BOOLEAN NOT NULL DEFAULT 1,
             polozhenie BOOLEAN NOT NULL DEFAULT 1,
             dopusheni BOOLEAN NOT NULL DEFAULT 1,
             mesta_provedeniya BOOLEAN NOT NULL DEFAULT 1,

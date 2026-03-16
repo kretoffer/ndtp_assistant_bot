@@ -27,6 +27,8 @@ class Config:
     spiski_data_path = "data/spiski_data.json"
     parsing_interval = 60
     TOPIC_NAMES = {
+        "new_removed_shifts": "Добавление/удаление смен",
+        "dates": "Даты",
         "polozhenie": "Положение",
         "dopusheni": "Допущенные к тестам",
         "mesta_provedeniya": "Места проведения",
