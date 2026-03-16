@@ -7,6 +7,8 @@ import pdfplumber
 import logging
 from aiogram import Bot
 from typing import List
+import ssl
+import certifi
 
 from notify_users import notify_all_users
 
@@ -27,7 +29,7 @@ FIRST_DISTRICT = "Авиакосмические технологии"
 
 
 async def fetch(url):
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=certifi.where()))) as session:
         async with session.get(url) as response:
             return await response.text()
 
@@ -51,6 +53,12 @@ async def init_parser(old_data_path: str, districts_data_path: str, dopusheni_da
     except FileNotFoundError:
         districts = await parse_all_districts()
         save_districts_data()
+    try:
+        with open(dopusheni_data_path, "r+", encoding="utf-8") as f:
+            dopusheni = json.load(f)
+    except FileNotFoundError:
+        dopusheni = await parse_all_dopusheni()
+        save_dopusheni_data()
 
 
 def save_old_data():
@@ -227,8 +235,8 @@ async def parse_district(url: str) -> dict:
     logging.info(f"Found URL: {url}")
     if not url:
         return {}
-
-    async with aiohttp.ClientSession() as session:
+    
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=certifi.where()))) as session:
         async with session.get(url) as response:
             if response.status != 200:
                 return {}
@@ -281,6 +289,128 @@ async def parse_all_districts() -> dict:
         if DOC_NAME in shift["docs"]:
             _districts[shift["name"]] = await parse_district(shift["docs"][DOC_NAME])
     return _districts
+
+
+def get_user(fio, school_and_class):
+    try:
+        fio_parts = fio.split()
+                                        
+        school_parts = school_and_class.split(',\n')
+                                        
+        education = school_parts[0].strip().replace("\n", " ")
+        grade = school_parts[1].strip() if len(school_parts) > 1 else None
+
+        surname = fio_parts[0] if len(fio_parts) > 0 else ''
+        name = fio_parts[1] if len(fio_parts) > 1 else ''
+        patronymic = ' '.join(fio_parts[2:]) if len(fio_parts) > 2 else ''
+
+        return {
+            "surname": surname,
+            "name": name,
+            "patronymic": patronymic,
+            "education": education,
+            "class": grade
+        }
+    except Exception as e:
+        logging.error(f"Could not parse row: {fio} {school_and_class}, error: {e}")
+
+
+async def parse_dopusheni(url: str) -> dict:
+    dopusheni_data = {}
+
+    logging.info(f"Parsing dopusheni from {url}")
+    try:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=certifi.where()))) as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    logging.warning(
+                        f"Failed to fetch {url}, status: {response.status}"
+                    )
+                    return {}
+                pdf_raw = await response.read()
+
+        pdf_file = io.BytesIO(pdf_raw)
+        with pdfplumber.open(pdf_file) as pdf:
+            data = []
+            for page in pdf.pages:
+                tables = page.find_tables()
+                for table in tables:
+                    _data = table.extract()
+                    if _data:
+                        data.extend(_data)
+            region = None
+            peoples = []
+            for row in data:
+                if len(row) >= 3 and row[0] and all([not bool(row[i]) for i in range(1, len(row))]):
+                    if region:
+                        dopusheni_data[region] = peoples
+                    peoples = []
+                    region = row[0]
+                elif len(row) == 3 and (row[0].startswith("№") or row[1] == "ФИО" or row[2] == "Учреждение образования, класс"): # pyright: ignore[reportOptionalMemberAccess]
+                    continue
+                elif len(row) >= 3 and not row[0] and peoples:
+                    valid_row = [el for el in row if el]
+                    if len(valid_row) == 2:
+                        people = peoples[-1]
+                        fio = " ".join((people["surname"], people["name"], people["patronymic"], valid_row[0])) # pyright: ignore[reportOptionalSubscript]
+                        school = people["education"] # pyright: ignore[reportOptionalSubscript]
+                        if people["class"]: # pyright: ignore[reportOptionalSubscript]
+                            school += f",\n{people['class']}" # pyright: ignore[reportOptionalSubscript]
+                        for number in range(9, 12):
+                            if valid_row[1].startswith(str(number)) and valid_row[1].endswith("класс"):
+                                school+=",\n"
+                        school+=valid_row[1]
+                        peoples[-1] = get_user(fio, school)
+                elif len(row) >= 3:
+                    new_row = [el for el in row if el]
+                    valid_row = []
+                    if len(new_row) > 3:
+                        for el in new_row:
+                            valid = True
+                            for elem in valid_row:
+                                if elem.startswith(el):
+                                    valid = False
+                            if valid:
+                                valid_row.append(el)
+                    else:
+                        valid_row = new_row
+                    if valid_row[1] == "ФИО":
+                        continue
+                    if len(valid_row) == 3:
+                        peoples.append(get_user(valid_row[1], valid_row[2]))
+                    elif len(valid_row) == 1 and not row[0] and peoples:
+                        people = peoples[-1]
+                        fio = " ".join((people["surname"], people["name"], people["patronymic"])) # pyright: ignore[reportOptionalSubscript]
+                        school = people["education"] # pyright: ignore[reportOptionalSubscript]
+                        if people["class"]: # pyright: ignore[reportOptionalSubscript]
+                            school += f",\n{people['class']}" # pyright: ignore[reportOptionalSubscript]
+                        for number in range(9, 12):
+                            if valid_row[0].startswith(str(number)) and valid_row[0].endswith("класс"):
+                                school+=",\n"
+                        school+=valid_row[0]
+                        peoples[-1] = get_user(fio, school)
+                    else:
+                        logging.warning(f"Unprocessed row: {row}")
+                else:
+                    logging.warning(f"Unprocessed row: {row}")
+            if region and peoples:
+                dopusheni_data[region] = peoples
+
+    except Exception as e:
+        logging.error(f"Error processing {url}: {e}", exc_info=True)
+
+    return dopusheni_data
+
+
+async def parse_all_dopusheni():
+    new_dopusheni = {}
+    for shift in old_data:
+        for doc_name, url in shift["docs"].items():
+            if doc_name.startswith(SPISKI_DOPUSCHENNYH_START_WITH):
+                new_dopusheni[shift["name"]] = await parse_dopusheni(url)
+    return new_dopusheni
+                
+
 
 
 def get_districts(name: str | None = None):

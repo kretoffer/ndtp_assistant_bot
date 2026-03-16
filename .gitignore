@@ -210,3 +210,6 @@ __marimo__/
 *.db
 *.sqlite3
 data
+
+
+.DS_Store
