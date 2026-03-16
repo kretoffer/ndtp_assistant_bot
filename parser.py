@@ -57,8 +57,14 @@ async def init_parser(old_data_path: str, districts_data_path: str, dopusheni_da
         with open(dopusheni_data_path, "r+", encoding="utf-8") as f:
             dopusheni = json.load(f)
     except FileNotFoundError:
-        dopusheni = await parse_all_dopusheni()
+        dopusheni = await parse_all_spiski(SPISKI_DOPUSCHENNYH_START_WITH, False)
         save_dopusheni_data()
+    try:
+        with open(spiski_data_path, "r+", encoding="utf-8") as f:
+            spiski = json.load(f)
+    except FileNotFoundError:
+        spiski = await parse_all_spiski(SPISKI_START_WITH, True)
+        save_spiski_data()
 
 
 def save_old_data():
@@ -235,7 +241,7 @@ async def parse_district(url: str) -> dict:
     logging.info(f"Found URL: {url}")
     if not url:
         return {}
-    
+
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=certifi.where()))) as session:
         async with session.get(url) as response:
             if response.status != 200:
@@ -291,31 +297,42 @@ async def parse_all_districts() -> dict:
     return _districts
 
 
-def get_user(fio, school_and_class):
+def get_user(fio, school_and_class, is_spiski = False):
     try:
         fio_parts = fio.split()
-                                        
+
         school_parts = school_and_class.split(',\n')
-                                        
-        education = school_parts[0].strip().replace("\n", " ")
-        grade = school_parts[1].strip() if len(school_parts) > 1 else None
+
+        education = None
+        grade = None
+        district = None
+        if not is_spiski:
+            education = school_parts[0].strip().replace("\n", " ")
+            grade = school_parts[1].strip() if len(school_parts) > 1 else None
+        else:
+            district = school_parts[0].strip().replace("\n", " ")
+            education = school_parts[1].strip().replace("\n", " ") if len(school_parts) > 1 else None
+            grade = school_parts[2].strip() if len(school_parts) > 2 else None
 
         surname = fio_parts[0] if len(fio_parts) > 0 else ''
         name = fio_parts[1] if len(fio_parts) > 1 else ''
         patronymic = ' '.join(fio_parts[2:]) if len(fio_parts) > 2 else ''
 
-        return {
+        user = {
             "surname": surname,
             "name": name,
             "patronymic": patronymic,
             "education": education,
             "class": grade
         }
+        if district:
+            user["district"] = district
+        return user
     except Exception as e:
         logging.error(f"Could not parse row: {fio} {school_and_class}, error: {e}")
 
 
-async def parse_dopusheni(url: str) -> dict:
+async def parse_spisok(url: str, is_spisok = False) -> dict:
     dopusheni_data = {}
 
     logging.info(f"Parsing dopusheni from {url}")
@@ -346,6 +363,8 @@ async def parse_dopusheni(url: str) -> dict:
                         dopusheni_data[region] = peoples
                     peoples = []
                     region = row[0]
+                    if region.startswith("Образовательное направление"):
+                        region = region .split("«")[1].rsplit("»")[0].replace("\n", " ")
                 elif len(row) == 3 and (row[0].startswith("№") or row[1] == "ФИО" or row[2] == "Учреждение образования, класс"): # pyright: ignore[reportOptionalMemberAccess]
                     continue
                 elif len(row) >= 3 and not row[0] and peoples:
@@ -354,13 +373,14 @@ async def parse_dopusheni(url: str) -> dict:
                         people = peoples[-1]
                         fio = " ".join((people["surname"], people["name"], people["patronymic"], valid_row[0])) # pyright: ignore[reportOptionalSubscript]
                         school = people["education"] # pyright: ignore[reportOptionalSubscript]
+                        school = school if school else ""
                         if people["class"]: # pyright: ignore[reportOptionalSubscript]
                             school += f",\n{people['class']}" # pyright: ignore[reportOptionalSubscript]
                         for number in range(9, 12):
                             if valid_row[1].startswith(str(number)) and valid_row[1].endswith("класс"):
                                 school+=",\n"
                         school+=valid_row[1]
-                        peoples[-1] = get_user(fio, school)
+                        peoples[-1] = get_user(fio, school, is_spisok)
                 elif len(row) >= 3:
                     new_row = [el for el in row if el]
                     valid_row = []
@@ -374,10 +394,16 @@ async def parse_dopusheni(url: str) -> dict:
                                 valid_row.append(el)
                     else:
                         valid_row = new_row
+                    if new_row[0].startswith("Образовательное направление"):
+                        if region:
+                            dopusheni_data[region] = peoples
+                        peoples = []
+                        region = new_row[1]
+                        continue
                     if valid_row[1] == "ФИО":
                         continue
                     if len(valid_row) == 3:
-                        peoples.append(get_user(valid_row[1], valid_row[2]))
+                        peoples.append(get_user(valid_row[1], valid_row[2], is_spisok))
                     elif len(valid_row) == 1 and not row[0] and peoples:
                         people = peoples[-1]
                         fio = " ".join((people["surname"], people["name"], people["patronymic"])) # pyright: ignore[reportOptionalSubscript]
@@ -388,7 +414,7 @@ async def parse_dopusheni(url: str) -> dict:
                             if valid_row[0].startswith(str(number)) and valid_row[0].endswith("класс"):
                                 school+=",\n"
                         school+=valid_row[0]
-                        peoples[-1] = get_user(fio, school)
+                        peoples[-1] = get_user(fio, school, is_spisok)
                     else:
                         logging.warning(f"Unprocessed row: {row}")
                 else:
@@ -402,15 +428,13 @@ async def parse_dopusheni(url: str) -> dict:
     return dopusheni_data
 
 
-async def parse_all_dopusheni():
+async def parse_all_spiski(start_with: str, is_spiski = False):
     new_dopusheni = {}
     for shift in old_data:
         for doc_name, url in shift["docs"].items():
-            if doc_name.startswith(SPISKI_DOPUSCHENNYH_START_WITH):
-                new_dopusheni[shift["name"]] = await parse_dopusheni(url)
+            if doc_name.startswith(start_with):
+                new_dopusheni[shift["name"]] = await parse_spisok(url, is_spiski)
     return new_dopusheni
-                
-
 
 
 def get_districts(name: str | None = None):
