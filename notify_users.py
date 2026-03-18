@@ -3,7 +3,13 @@ import html
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 
-from database import get_all_users
+from database import get_subscribers_by_topic, get_all_users
+
+
+DOC_NAME = "Положение об образовательной смене"
+SPISKI_DOPUSCHENNYH_START_WITH = "Списочный состав участников, допущенных ко второму этапу"
+SPISKI_START_WITH = "Списочный состав групп учащихся, зачисленных"
+MESTA = "Места проведения"
 
 
 def generate_message_text(changes):
@@ -38,8 +44,33 @@ def generate_message_text(changes):
     return text
 
 
+def get_users_for_docs(docs: dict) -> set:
+    users = set()
+    for doc in docs:
+        if doc == DOC_NAME:
+            users.update(get_subscribers_by_topic("polozhenie"))
+        elif doc == MESTA:
+            users.update(get_subscribers_by_topic("mesta_provedeniya"))
+        elif doc.startswith(SPISKI_DOPUSCHENNYH_START_WITH):
+            users.update(get_subscribers_by_topic("dopusheni"))
+        elif doc.startswith(SPISKI_START_WITH):
+            users.update(get_subscribers_by_topic("spiski"))
+        else:
+            users = set(get_all_users())
+    return users
+
+
 async def notify_all_users(bot: Bot, changes):
-    users = get_all_users()
+    users = set()
+    if changes["removed_shifts"] or changes["new_shifts"]:
+        users.update(get_subscribers_by_topic("new_removed_shifts"))
+    for modified_shift in changes["modified_shifts"]:
+        if "date" in modified_shift["changes"] or "feed" in modified_shift["changes"]:
+            users.update(get_subscribers_by_topic("dates"))
+        if "removed_docs" in modified_shift["changes"]:
+            users.update(get_users_for_docs(modified_shift["changes"]["removed_docs"]))
+        if "added_docs" in modified_shift["changes"]:
+            users.update(get_users_for_docs(modified_shift["changes"]["added_docs"]))
     text = generate_message_text(changes)
     logging.info(f"Starting to send message to {len(users)} users.")
 

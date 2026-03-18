@@ -75,7 +75,7 @@ def get_subscribers_by_topic(topic: str):
     """
     Возвращает id всех пользователей, для которых указанная тема рассылки активна.
     """
-    allowed_topics = ['polozhenie', 'dopusheni', 'mesta_provedeniya', 'spiski']
+    allowed_topics = ['new_removed_shifts', 'dates', 'polozhenie', 'dopusheni', 'mesta_provedeniya', 'spiski']
     if topic not in allowed_topics:
         return []
 
@@ -83,4 +83,4 @@ def get_subscribers_by_topic(topic: str):
     cursor = conn.cursor()
     cursor.execute(f"SELECT id FROM subscriptions WHERE {topic} = 1")
     users = cursor.fetchall()
-    return [user['id'] for user in users]
+    return users
