@@ -35,7 +35,7 @@ async def cmd_start(message: Message, config: Config, state: FSMContext):
     conn.commit()
 
     if user and user[1] and user[2]:
-        await message.answer(config.messages.start_phrase)
+        await message.answer(config.messages.start_phrase.replace("Привет!", f"Привет, {user[2]} {user[1]}!"))
     else:
         await state.set_state(Registration.waiting_for_name)
         await message.answer(
@@ -93,7 +93,7 @@ async def surname_entered(message: Message, state: FSMContext, config: Config):
             (name, surname, message.from_user.id),
         )
         conn.commit()
-        await message.answer(config.messages.registration_successful)
+        await message.answer(f"{config.messages.registration_successful}, {surname} {name}\n\nЧтобы поменять имя /edit_name")
     except Exception as e:
         await message.answer(config.messages.error_occured)
         print(e)
