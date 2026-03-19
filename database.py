@@ -71,6 +71,23 @@ def get_user_id_by_name(name, surname):
     return None
 
 
+def get_user_id_by_surname(surname):
+    """
+    Возвращает id пользователя по фамилии.
+    Учитывает, что вместо 'е' может быть 'ё' и наоборот, и не зависит от регистра.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id FROM users
+        WHERE replace(lower(surname), 'ё', 'е') = replace(lower(?), 'ё', 'е')
+    """, (surname,))
+    user = cursor.fetchone()
+    if user:
+        return user['id']
+    return None
+
+
 def get_subscribers_by_topic(topic: str):
     """
     Возвращает id всех пользователей, для которых указанная тема рассылки активна.

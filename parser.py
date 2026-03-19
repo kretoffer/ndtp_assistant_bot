@@ -174,6 +174,8 @@ def compare(new_data: list):
     for name in old_shift_names - new_shift_names:
         changes["removed_shifts"].append(old_shifts_dict[name])
 
+    new_spiski = []
+
     for name in old_shift_names & new_shift_names:
         old_shift = old_shifts_dict[name]
         new_shift = new_shifts_dict[name]
@@ -190,6 +192,15 @@ def compare(new_data: list):
 
         added_docs = new_docs - old_docs
         removed_docs = old_docs - new_docs
+
+        for doc in added_docs:
+            if doc.startswith(SPISKI_DOPUSCHENNYH_START_WITH) or doc.startswith(SPISKI_START_WITH):
+                new_spiski.append({
+                    "shift": name,
+                    "doc": doc,
+                    "link": new_shift["docs"][doc],
+                    "is_spiski": doc.startswith(SPISKI_START_WITH)
+                })
 
         if added_docs:
             modifications["added_docs"] = {
@@ -217,7 +228,7 @@ def compare(new_data: list):
     if any(changes.values()):
         old_data = new_data
         save_old_data()
-        return changes
+        return changes, new_spiski
 
     return None
 
@@ -228,7 +239,7 @@ async def parse_and_compare(bot: Bot):
     changes = compare(new_data)
     logging.info(f"Changes: {changes}")
     if changes:
-        await notify_all_users(bot, changes)
+        await notify_all_users(bot, *changes)
         districts = await parse_all_districts()
         save_districts_data()
 
@@ -431,6 +442,14 @@ async def parse_all_spiski(start_with: str, is_spiski = False):
             if doc_name.startswith(start_with):
                 new_dopusheni[shift["name"]] = await parse_spisok(url, is_spiski)
     return new_dopusheni
+
+
+async def parse_new_spisok(url: str, shift_name: str, is_spiski = False):
+    spisok = spiski if is_spiski else dopusheni
+    spisok[shift_name] = await parse_spisok(url, is_spiski)
+    save_dopusheni_data()
+    save_spiski_data()
+    return spisok[shift_name]
 
 
 def get_old_data() -> list:
