@@ -5,7 +5,7 @@ import html
 
 from keyboards.schedule_keyboards import get_schedule_keyboard, get_regions_keyboard
 from parser import get_old_data, get_districts, get_spiski
-from database import get_user_id_by_name
+from database import get_user_id_by_name, check_username
 
 
 schedule_router = Router()
@@ -13,12 +13,16 @@ schedule_router = Router()
 
 @schedule_router.message(Command("schedule"))
 async def schedule(message: Message):
+    if not message.from_user:
+        return
+    check_username(message.from_user.id, message.from_user.username)
     await message.answer("📄 Выберите смену", reply_markup=get_schedule_keyboard())
 
 
 @schedule_router.callback_query(F.data.startswith("districts:"))
 async def show_districts(callback: CallbackQuery):
     if callback.data and callback.message:
+        check_username(callback.from_user.id, callback.from_user.username)
         shift_index = int(callback.data.split(":")[1])
         name = get_old_data()[shift_index]["name"]
         text = f"📌 <b>{name}\nОбразовательные направления:</b>\n\n"

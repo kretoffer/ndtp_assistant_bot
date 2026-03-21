@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InaccessibleMessage
 from aiogram.filters import Command
-from database import get_db_connection
+from database import get_db_connection, check_username
 
 import logging
 
@@ -15,6 +15,8 @@ subscriptions_router = Router()
 async def cmd_subscriptions(message: Message, config: Config):
     if not message.from_user:
         return
+
+    check_username(message.from_user.id, message.from_user.username)
 
     keyboard = get_subscription_keyboard(message.from_user.id, config.TOPIC_NAMES)
     if keyboard:
@@ -35,6 +37,8 @@ async def cmd_subscriptions(message: Message, config: Config):
 async def toggle_subscription_handler(callback_query: CallbackQuery, config: Config):
     if not callback_query.message or not callback_query.from_user:
         return
+
+    check_username(callback_query.from_user.id, callback_query.from_user.username)
 
     topic = callback_query.data.split(":")[1] # pyright: ignore[reportOptionalMemberAccess]
 

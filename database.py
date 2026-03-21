@@ -28,7 +28,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY,
             name TEXT,
-            surname TEXT
+            surname TEXT,
+            username TEXT
         )
     """)
 
@@ -43,6 +44,13 @@ def init_db():
             spiski BOOLEAN NOT NULL DEFAULT 1
         )
     """)
+    conn.commit()
+
+
+def check_username(id, username):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET username = ? WHERE id = ? AND username IS NOT ?", (username, id, username))
     conn.commit()
 
 

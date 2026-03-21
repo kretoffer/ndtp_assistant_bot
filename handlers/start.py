@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 from config import Config
-from database import get_db_connection
+from database import get_db_connection, check_username
 from keyboards import cancel_keyboard
 
 
@@ -27,7 +27,7 @@ async def cmd_start(message: Message, config: Config, state: FSMContext):
     user = cursor.fetchone()
     if not user:
         cursor.execute(
-            "INSERT OR IGNORE INTO users (id) VALUES (?)", (message.from_user.id,)
+            "INSERT OR IGNORE INTO users (id, username) VALUES (?)", (message.from_user.id, message.from_user.username)
         )
         cursor.execute(
             "INSERT OR IGNORE INTO subscriptions (id, polozhenie, dopusheni, mesta_provedeniya, spiski, new_removed_shifts, dates) VALUES (?, 1, 1, 1, 1, 1, 1)", (message.from_user.id,)
@@ -48,10 +48,11 @@ async def cmd_start(message: Message, config: Config, state: FSMContext):
 async def cmd_edit_name(message: Message, config: Config, state: FSMContext):
     if not message.from_user:
         return
+    check_username(message.from_user.id, message.from_user.username)
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT OR IGNORE INTO users (id) VALUES (?)", (message.from_user.id,)
+        "INSERT OR IGNORE INTO users (id, username) VALUES (?)", (message.from_user.id, message.from_user.username)
     )
     conn.commit()
 
@@ -81,6 +82,7 @@ async def name_entered(message: Message, state: FSMContext, config: Config):
 async def surname_entered(message: Message, state: FSMContext, config: Config):
     if not message.from_user:
         return
+    check_username(message.from_user.id, message.from_user.username)
     user_data = await state.get_data()
     name = user_data.get("name")
     surname = message.text
