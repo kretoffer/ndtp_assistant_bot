@@ -5,7 +5,7 @@ import html
 
 from keyboards.schedule_keyboards import get_schedule_keyboard, get_regions_keyboard
 from parser import get_old_data, get_districts, get_spiski
-from database import get_user_id_by_name, check_username
+from database import get_user_by_name, check_username
 
 
 schedule_router = Router()
@@ -55,8 +55,11 @@ async def show_spiski(callback: CallbackQuery):
             text = f'😸 <b>Прошедшие на образовательное направление "{keys[district_index]}</b>":\n\n'
             for person in spiski[keys[district_index]]: # pyright: ignore[reportOptionalSubscript]
                 line = " ".join((person["surname"], person["name"], person["patronymic"]))
-                if user_id := get_user_id_by_name(person["name"], person["surname"]):
-                    line = f'<a href="tg://user?id={html.escape(str(user_id))}">{html.escape(line)}</a>'
+                if user := get_user_by_name(person["name"], person["surname"]):
+                    if user["username"]:
+                        line = f'<a href="https://t.me/{html.escape(user["username"])}">{html.escape(line)}</a>'
+                    elif user["id"]:
+                        line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
                 line += "\n"
                 text += line
             await callback.message.answer(text, parse_mode='HTML')

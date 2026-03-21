@@ -3,7 +3,7 @@ import html
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 
-from database import get_subscribers_by_topic, get_all_users, get_user_id_by_name, get_user_id_by_surname
+from database import get_subscribers_by_topic, get_all_users, get_user_by_name, get_user_by_surname
 
 DOC_NAME = "Положение об образовательной смене"
 SPISKI_DOPUSCHENNYH_START_WITH = "Списочный состав участников, допущенных ко второму этапу"
@@ -70,14 +70,14 @@ async def notify_about_spiski(bot: Bot, spisok_info: dict):
     spisok = await parse_new_spisok(spisok_info["link"], spisok_info["shift"], spisok_info["is_spiski"])
     for district_name, district in spisok.items():
         for person in district:
-            if user_id := get_user_id_by_name(person["name"], person["surname"]):
+            if user := get_user_by_name(person["name"], person["surname"]):
                 message = f"👋 Хей, {person['surname']} {person["name"]}, нашел тебя в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name} "
                 district_dir = get_districts(spisok_info["shift"])[district_name] # pyright: ignore[reportOptionalSubscript]
                 message += f"({district_dir})" if spisok_info['is_spiski'] and district_dir != district_name else ""
-            elif user_id := get_user_id_by_surname(person["surname"]):
+            elif user := get_user_by_surname(person["surname"]):
                 message = f"👋 Хей, нашел фамилию {person['surname']} в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
-            if user_id:
-                await bot.send_message(user_id, message, parse_mode="HTML") # pyright: ignore[reportPossiblyUnboundVariable]
+            if user:
+                await bot.send_message(user["id"], message, parse_mode="HTML") # pyright: ignore[reportPossiblyUnboundVariable]
 
 
 async def notify_all_users(bot: Bot, changes, new_spiski):

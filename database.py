@@ -61,7 +61,7 @@ def get_all_users():
     return cursor.fetchall()
 
 
-def get_user_id_by_name(name, surname):
+def get_user_by_name(name, surname):
     """
     Возвращает id пользователя по имени и фамилии.
     Учитывает, что вместо 'е' может быть 'ё' и наоборот, и не зависит от регистра.
@@ -74,12 +74,10 @@ def get_user_id_by_name(name, surname):
           AND replace(lower(surname), 'ё', 'е') = replace(lower(?), 'ё', 'е')
     """, (name, surname))
     user = cursor.fetchone()
-    if user:
-        return user['id']
-    return None
+    return user
 
 
-def get_user_id_by_surname(surname):
+def get_user_by_surname(surname):
     """
     Возвращает id пользователя по фамилии.
     Учитывает, что вместо 'е' может быть 'ё' и наоборот, и не зависит от регистра.
@@ -91,9 +89,7 @@ def get_user_id_by_surname(surname):
         WHERE replace(lower(surname), 'ё', 'е') = replace(lower(?), 'ё', 'е')
     """, (surname,))
     user = cursor.fetchone()
-    if user:
-        return user['id']
-    return None
+    return user
 
 
 def get_subscribers_by_topic(topic: str):
