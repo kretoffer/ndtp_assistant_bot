@@ -62,7 +62,7 @@ async def show_spiski(callback: CallbackQuery):
                         line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
                 line += "\n"
                 text += line
-            await callback.message.answer(text, parse_mode='HTML')
+            await callback.message.answer(text, parse_mode='HTML', disable_web_page_preview=True)
     await callback.answer()
 
 

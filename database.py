@@ -63,13 +63,13 @@ def get_all_users():
 
 def get_user_by_name(name, surname):
     """
-    Возвращает id пользователя по имени и фамилии.
+    Возвращает пользователя по имени и фамилии.
     Учитывает, что вместо 'е' может быть 'ё' и наоборот, и не зависит от регистра.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id FROM users
+        SELECT * FROM users
         WHERE replace(lower(name), 'ё', 'е') = replace(lower(?), 'ё', 'е')
           AND replace(lower(surname), 'ё', 'е') = replace(lower(?), 'ё', 'е')
     """, (name, surname))
@@ -79,13 +79,13 @@ def get_user_by_name(name, surname):
 
 def get_user_by_surname(surname):
     """
-    Возвращает id пользователя по фамилии.
+    Возвращает пользователя по фамилии.
     Учитывает, что вместо 'е' может быть 'ё' и наоборот, и не зависит от регистра.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id FROM users
+        SELECT * FROM users
         WHERE replace(lower(surname), 'ё', 'е') = replace(lower(?), 'ё', 'е')
     """, (surname,))
     user = cursor.fetchone()

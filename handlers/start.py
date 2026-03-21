@@ -27,7 +27,7 @@ async def cmd_start(message: Message, config: Config, state: FSMContext):
     user = cursor.fetchone()
     if not user:
         cursor.execute(
-            "INSERT OR IGNORE INTO users (id, username) VALUES (?)", (message.from_user.id, message.from_user.username)
+            "INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)", (message.from_user.id, message.from_user.username)
         )
         cursor.execute(
             "INSERT OR IGNORE INTO subscriptions (id, polozhenie, dopusheni, mesta_provedeniya, spiski, new_removed_shifts, dates) VALUES (?, 1, 1, 1, 1, 1, 1)", (message.from_user.id,)
@@ -37,10 +37,8 @@ async def cmd_start(message: Message, config: Config, state: FSMContext):
     if user and user[1] and user[2]:
         await message.answer(config.messages.start_phrase.replace("Привет!", f"Привет, {user[2]} {user[1]}!"))
     else:
-        await state.set_state(Registration.waiting_for_name)
         await message.answer(
-            config.messages.start_phrase + "\n\n" + config.messages.enter_name,
-            reply_markup=cancel_keyboard,
+            config.messages.start_phrase + "\n\n" + config.messages.noname
         )
 
 
@@ -52,7 +50,7 @@ async def cmd_edit_name(message: Message, config: Config, state: FSMContext):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT OR IGNORE INTO users (id, username) VALUES (?)", (message.from_user.id, message.from_user.username)
+        "INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)", (message.from_user.id, message.from_user.username)
     )
     conn.commit()
 
