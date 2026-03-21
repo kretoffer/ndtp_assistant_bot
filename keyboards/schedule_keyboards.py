@@ -15,6 +15,7 @@ def get_schedule_keyboard():
             row = []
     if row:
         keyboard_rows.append(row)
+    keyboard_rows.append([InlineKeyboardButton(text="🔙 Назад", callback_data="home")])
     return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
 
 
@@ -24,4 +25,5 @@ def get_regions_keyboard(shift, keys: list):
         if region == "Информационные и компьютерные технологии":
             region = f"⚠️ {region} ⚠️"
         markup.append([InlineKeyboardButton(text=region, callback_data=f"spiski:{shift}:{i}")])
+    markup.append([InlineKeyboardButton(text="🔙 Назад", callback_data=f"shift-info:{shift}")])
     return InlineKeyboardMarkup(inline_keyboard=markup)

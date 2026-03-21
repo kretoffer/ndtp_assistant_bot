@@ -1,3 +1,5 @@
+from typing import Union
+
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery, InaccessibleMessage
 from aiogram.filters import Command
@@ -6,7 +8,9 @@ from aiogram.fsm.state import State, StatesGroup
 
 from config import Config
 from database import get_db_connection, check_username
-from keyboards import cancel_keyboard
+from keyboards.cancel_keyboard import cancel_keyboard
+
+from tools import get_from_user_and_answer_from_update
 
 
 class Registration(StatesGroup):
@@ -18,28 +22,30 @@ start_router = Router()
 
 
 @start_router.message(Command("start"))
-async def cmd_start(message: Message, config: Config, state: FSMContext):
-    if not message.from_user:
+@start_router.callback_query(lambda c: c.data == "home")
+async def cmd_start(update: Union[Message, CallbackQuery], config: Config, state: FSMContext):
+    from_user, answer = get_from_user_and_answer_from_update(update)
+
+    if not from_user or not answer:
         return
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE id = ?", (message.from_user.id,))
+    cursor.execute("SELECT * FROM users WHERE id = ?", (from_user.id,))
     user = cursor.fetchone()
     if not user:
         cursor.execute(
-            "INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)", (message.from_user.id, message.from_user.username)
+            "INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)", (from_user.id, from_user.username)
         )
         cursor.execute(
-            "INSERT OR IGNORE INTO subscriptions (id, polozhenie, dopusheni, mesta_provedeniya, spiski, new_removed_shifts, dates) VALUES (?, 1, 1, 1, 1, 1, 1)", (message.from_user.id,)
+            "INSERT OR IGNORE INTO subscriptions (id, polozhenie, dopusheni, mesta_provedeniya, spiski, new_removed_shifts, dates) VALUES (?, 1, 1, 1, 1, 1, 1)", (from_user.id,)
         )
     conn.commit()
 
     if user and user[1] and user[2]:
-        await message.answer(config.messages.start_phrase.replace("Привет!", f"Привет, {user[2]} {user[1]}!"))
+        await answer(config.messages.start_phrase.replace("Привет!", f"Привет, {user[2]} {user[1]}!"))
     else:
-        await message.answer(
-            config.messages.start_phrase + "\n\n" + config.messages.noname
-        )
+        await answer(config.messages.start_phrase + "\n\n" + config.messages.noname)
 
 
 @start_router.message(Command("edit_name"))
@@ -67,6 +73,7 @@ async def cancel_handler(
         callback_query.message, InaccessibleMessage
     ):
         await callback_query.message.edit_text(config.messages.action_canceled)
+
 
 
 @start_router.message(Registration.waiting_for_name)

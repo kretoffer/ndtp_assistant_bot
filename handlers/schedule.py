@@ -1,22 +1,29 @@
+from typing import Union
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 import html
 
 from keyboards.schedule_keyboards import get_schedule_keyboard, get_regions_keyboard
+from keyboards import get_back_markup
 from parser import get_old_data, get_districts, get_spiski
 from database import get_user_by_name, check_username
+
+from tools import get_from_user_and_answer_from_update
 
 
 schedule_router = Router()
 
 
 @schedule_router.message(Command("schedule"))
-async def schedule(message: Message):
-    if not message.from_user:
+@schedule_router.callback_query(lambda c: c.data == "schedule")
+async def schedule(update: Union[Message, CallbackQuery]):
+    from_user, answer = get_from_user_and_answer_from_update(update)
+    if not from_user or not answer:
         return
-    check_username(message.from_user.id, message.from_user.username)
-    await message.answer("📄 Выберите смену", reply_markup=get_schedule_keyboard())
+    check_username(from_user.id, from_user.username)
+    await answer("📄 Выберите смену", reply_markup=get_schedule_keyboard())
 
 
 @schedule_router.callback_query(F.data.startswith("districts:"))
@@ -34,7 +41,7 @@ async def show_districts(callback: CallbackQuery):
                 if program in ("Искусственный интеллект", "Прототипирование", "Цифровой ритейл"):
                     program = f"⛔️ {program} ⛔️"
                 text += f"{district} — {program}\n"
-        await callback.message.answer(text, parse_mode="HTML")
+        await callback.message.answer(text, parse_mode="HTML", reply_markup=get_back_markup(f"shift-info:{shift_index}"))
     await callback.answer()
 
 
@@ -62,7 +69,7 @@ async def show_spiski(callback: CallbackQuery):
                         line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
                 line += "\n"
                 text += line
-            await callback.message.answer(text, parse_mode='HTML', disable_web_page_preview=True)
+            await callback.message.answer(text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=get_back_markup(f"shift-info:{shift_index}"))
     await callback.answer()
 
 
@@ -89,7 +96,8 @@ async def show_shift_info(callback: CallbackQuery):
         for doc in shift["docs"]:
             if "Списочный состав групп учащихся, зачисленных" in doc:
                 markup.append([InlineKeyboardButton(text="👀 Кто прошел?", callback_data=f"spiski:{shift_index}")])
-        markup = InlineKeyboardMarkup(inline_keyboard=markup) if markup else None
+        markup.append([InlineKeyboardButton(text="🔙 Назад", callback_data="schedule")])
+        markup = InlineKeyboardMarkup(inline_keyboard=markup)
         await callback.message.answer(
             text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup
         )
