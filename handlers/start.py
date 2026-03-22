@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 from config import Config
-from database import get_db_connection, check_username
+from database import add_user, check_username, get_user_by_id, update_user_name
 from keyboards.cancel_keyboard import cancel_keyboard
 
 from tools import get_from_user_and_answer_from_update
@@ -29,21 +29,11 @@ async def cmd_start(update: Union[Message, CallbackQuery], config: Config, state
     if not from_user or not answer:
         return
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE id = ?", (from_user.id,))
-    user = cursor.fetchone()
-    if not user:
-        cursor.execute(
-            "INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)", (from_user.id, from_user.username)
-        )
-        cursor.execute(
-            "INSERT OR IGNORE INTO subscriptions (id, polozhenie, dopusheni, mesta_provedeniya, spiski, new_removed_shifts, dates) VALUES (?, 1, 1, 1, 1, 1, 1)", (from_user.id,)
-        )
-    conn.commit()
+    add_user(from_user.id, from_user.username)
+    user = get_user_by_id(from_user.id)
 
-    if user and user[1] and user[2]:
-        await answer(config.messages.start_phrase.replace("Привет!", f"Привет, {user[2]} {user[1]}!"))
+    if user and user["name"] and user["surname"]:
+        await answer(config.messages.start_phrase.replace("Привет!", f"Привет, {user['surname']} {user['name']}!"))
     else:
         await answer(config.messages.start_phrase + "\n\n" + config.messages.noname)
 
@@ -52,13 +42,8 @@ async def cmd_start(update: Union[Message, CallbackQuery], config: Config, state
 async def cmd_edit_name(message: Message, config: Config, state: FSMContext):
     if not message.from_user:
         return
+    add_user(message.from_user.id, message.from_user.username)
     check_username(message.from_user.id, message.from_user.username)
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)", (message.from_user.id, message.from_user.username)
-    )
-    conn.commit()
 
     await state.set_state(Registration.waiting_for_name)
     await message.answer(config.messages.enter_name, reply_markup=cancel_keyboard)
@@ -92,14 +77,8 @@ async def surname_entered(message: Message, state: FSMContext, config: Config):
     name = user_data.get("name")
     surname = message.text
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute(
-            "UPDATE users SET name = ?, surname = ? WHERE id = ?",
-            (name, surname, message.from_user.id),
-        )
-        conn.commit()
+        update_user_name(message.from_user.id, name, surname)
         await message.answer(f"{config.messages.registration_successful}, {surname} {name}\n\nЧтобы поменять имя /edit_name")
     except Exception as e:
         await message.answer(config.messages.error_occured)

@@ -8,7 +8,7 @@ import html
 from keyboards.schedule_keyboards import get_schedule_keyboard, get_regions_keyboard
 from keyboards import get_back_markup
 from parser import get_old_data, get_districts, get_spiski
-from database import get_user_by_name, check_username
+from database import get_user_by_name, check_username, add_user
 
 from tools import get_from_user_and_answer_from_update
 
@@ -22,6 +22,7 @@ async def schedule(update: Union[Message, CallbackQuery]):
     from_user, answer = get_from_user_and_answer_from_update(update)
     if not from_user or not answer:
         return
+    add_user(from_user.id, from_user.username)
     check_username(from_user.id, from_user.username)
     await answer("📄 Выберите смену", reply_markup=get_schedule_keyboard())
 
