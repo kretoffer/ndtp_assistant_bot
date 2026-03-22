@@ -151,6 +151,7 @@ def add_group(group_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("INSERT OR IGNORE INTO groups (group_id) VALUES (?)", (group_id,))
+    cursor.execute("INSERT OR IGNORE INTO subscriptions (id) VALUES (?)", (group_id,))
     conn.commit()
 
 def remove_group(group_id):

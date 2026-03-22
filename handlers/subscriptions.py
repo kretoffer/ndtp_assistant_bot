@@ -24,7 +24,7 @@ async def cmd_subscriptions(message: Message, config: Config):
     add_user(message.from_user.id, message.from_user.username)
     check_username(message.from_user.id, message.from_user.username)
 
-    keyboard = get_subscription_keyboard(message.from_user.id, config.TOPIC_NAMES)
+    keyboard = get_subscription_keyboard(message.chat.id, config.TOPIC_NAMES)
     await message.answer(
         config.messages.subscriptions, reply_markup=keyboard, parse_mode="HTML"
     )
@@ -47,7 +47,7 @@ async def toggle_subscription_handler(callback_query: CallbackQuery, config: Con
         return
 
     try:
-        current_state = get_subscription_status(callback_query.from_user.id)
+        current_state = get_subscription_status(callback_query.message.chat.id)
 
         if current_state is None:
             await callback_query.answer(
@@ -58,9 +58,9 @@ async def toggle_subscription_handler(callback_query: CallbackQuery, config: Con
 
         new_state = not current_state[topic]
 
-        update_subscription(callback_query.from_user.id, topic, new_state)
+        update_subscription(callback_query.message.chat.id, topic, new_state)
 
-        new_keyboard = get_subscription_keyboard(callback_query.from_user.id, config.TOPIC_NAMES)
+        new_keyboard = get_subscription_keyboard(callback_query.message.chat.id, config.TOPIC_NAMES)
         if isinstance(callback_query.message, InaccessibleMessage):
             await callback_query.answer()
             return
