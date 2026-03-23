@@ -60,9 +60,15 @@ async def cancel_handler(
         await callback_query.message.edit_text(config.messages.action_canceled)
 
 
-
 @start_router.message(Registration.waiting_for_name)
 async def name_entered(message: Message, state: FSMContext, config: Config):
+    if not message.text:
+        return
+    name_parts = message.text.split()
+    if len(name_parts) >= 2 and message.from_user:
+        check_username(message.from_user.id, message.from_user.username)
+        await reg_user_name(message, name_parts[1], name_parts[0], config, state)
+        return
     await state.update_data(name=message.text)
     await state.set_state(Registration.waiting_for_surname)
     await message.answer(config.messages.enter_surname, reply_markup=cancel_keyboard)
@@ -77,8 +83,12 @@ async def surname_entered(message: Message, state: FSMContext, config: Config):
     name = user_data.get("name")
     surname = message.text
 
+    await reg_user_name(message, name, surname, config, state)
+
+
+async def reg_user_name(message: Message, name, surname, config: Config, state: FSMContext):
     try:
-        update_user_name(message.from_user.id, name, surname)
+        update_user_name(message.from_user.id, name, surname) # pyright: ignore[reportOptionalMemberAccess]
         await message.answer(f"{config.messages.registration_successful}, {surname} {name}\n\nЧтобы поменять имя /edit_name")
     except Exception as e:
         await message.answer(config.messages.error_occured)
