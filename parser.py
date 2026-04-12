@@ -122,6 +122,10 @@ async def parse() -> list:
             date_tag = columns[1].find("h1")
             if date_tag:
                 date = date_tag.text.strip()
+                year_match = re.search(r'\b(20\d{2})\b', date)
+                if year_match:
+                    year = year_match.group(1)
+                    name = f"{year} {name}"
 
         feed = ""
         panel_body = panel.find("div", class_="panel-body")
