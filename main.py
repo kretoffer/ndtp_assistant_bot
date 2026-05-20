@@ -11,7 +11,8 @@ from handlers import (
     schedule_router,
     subscriptions_router,
     group_managment_router,
-    districts_router
+    districts_router,
+    broadcast_router
 )
 
 from parser import init_parser, parse_and_compare
@@ -52,6 +53,7 @@ async def main():
     dp.include_router(subscriptions_router)
     dp.include_router(group_managment_router)
     dp.include_router(districts_router)
+    dp.include_router(broadcast_router)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(

@@ -11,6 +11,7 @@ class Messages:
                         "👀 Используйте /districts чтобы узнать побольше о направлениях\n"\
                         "\n✏️ Чтобы поменять имя /edit_name"
     noname: str = "Если хочешь чтобы я искал тебя в списках и сообщал если найду, добавь свое имя через /edit_name"
+    broadcast_start: str = "Начинаем рассылку. Отправьте сообщение, которое будет разослано всем пользователям."
     enter_name: str = "Введи свое имя и я буду сообщать тебе если увижу тебя в списках\nЕсли ты не хочешь вводить имя, то нажми отмена и тогда я тебе буду сообщать только о изменении календаря образовательных смен"
     enter_surname: str = "Теперь введи свою фамилию"
     action_canceled: str = "❌ Действие отменено"
@@ -22,6 +23,7 @@ class Messages:
 @dataclass
 class Config:
     token: str
+    admin_id: int
     messages: Messages
     db_path: str = "data/database.db"
     old_data_path = "data/old_data.json"
@@ -47,8 +49,12 @@ def load_config() -> Config:
     token = os.getenv("BOT_TOKEN")
     if not token:
         raise ValueError("Haven't BOT_TOKEN in .env")
+    admin_id = os.getenv("ADMIN_ID")
+    if not admin_id:
+        raise ValueError("Haven't ADMIN_ID in .env")
     return Config(
         token=token,
+        admin_id=int(admin_id),
         messages=Messages(),
         db_path=os.getenv("DB_PATH", "data/database.db"),
     )
