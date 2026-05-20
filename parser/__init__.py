@@ -12,15 +12,19 @@ import certifi
 
 from notify_users import notify_all_users
 
+from parser.districts_info_parser import parse_educational_directions
+
 
 _old_data_path = None
 _districts_data_path = None
 _dopusheni_data_path = None
 _spiski_data_path = None
+_districts_info_path = None
 old_data = []
 districts = {}
 dopusheni = {}
 spiski = {}
+districts_info = {}
 
 DOC_NAME = "Положение об образовательной смене"
 SPISKI_DOPUSCHENNYH_START_WITH = "Списочный состав участников, допущенных ко второму этапу"
@@ -34,13 +38,15 @@ async def fetch(url):
             return await response.text()
 
 
-async def init_parser(old_data_path: str, districts_data_path: str, dopusheni_data_path: str, spiski_data_path: str):
-    global _old_data_path, _districts_data_path, _dopusheni_data_path, _spiski_data_path,\
-            old_data, districts, dopusheni, spiski
+async def init_parser(old_data_path: str, districts_data_path: str, dopusheni_data_path: str, spiski_data_path: str,\
+                      districts_info_path):
+    global _old_data_path, _districts_data_path, _dopusheni_data_path, _spiski_data_path, _districts_info_path,\
+            old_data, districts, dopusheni, spiski, districts_info
     _old_data_path = old_data_path
     _districts_data_path = districts_data_path
     _dopusheni_data_path = dopusheni_data_path
     _spiski_data_path = spiski_data_path
+    _districts_info_path = districts_info_path
     try:
         with open(old_data_path, "r+", encoding="utf-8") as f:
             old_data = json.load(f)["schedule"]
@@ -65,6 +71,12 @@ async def init_parser(old_data_path: str, districts_data_path: str, dopusheni_da
     except FileNotFoundError:
         spiski = await parse_all_spiski(SPISKI_START_WITH, True)
         save_spiski_data()
+    try:
+        with open(_districts_info_path, "r+", encoding="utf-8") as f:
+            districts_info = json.load(f)
+    except FileNotFoundError:
+        districts_info = await parse_educational_directions()
+        save_districts_info()
 
 
 def save_old_data():
@@ -93,6 +105,13 @@ def save_districts_data():
         raise FileExistsError("No data path")
     with open(_districts_data_path, "w", encoding="utf-8") as f:
         json.dump(districts, f, indent=4, ensure_ascii=False)
+
+
+def save_districts_info():
+    if not _districts_info_path:
+        raise FileExistsError("No data path")
+    with open(_districts_info_path, "w", encoding="utf-8") as f:
+        json.dump(districts_info, f, indent=4, ensure_ascii=False)
 
 
 async def parse() -> list:

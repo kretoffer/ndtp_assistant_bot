@@ -10,7 +10,8 @@ from handlers import (
     start_router,
     schedule_router,
     subscriptions_router,
-    group_managment_router
+    group_managment_router,
+    districts_router
 )
 
 from parser import init_parser, parse_and_compare
@@ -25,7 +26,8 @@ async def on_startup(dispatcher: Dispatcher):
         dispatcher["config"].old_data_path,
         dispatcher["config"].districts_data_path,
         dispatcher["config"].dopusheni_data_path,
-        dispatcher["config"].spiski_data_path
+        dispatcher["config"].spiski_data_path,
+        dispatcher["config"].districts_info_path
     )
 
 
@@ -48,6 +50,7 @@ async def main():
     dp.include_router(schedule_router)
     dp.include_router(subscriptions_router)
     dp.include_router(group_managment_router)
+    dp.include_router(districts_router)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(

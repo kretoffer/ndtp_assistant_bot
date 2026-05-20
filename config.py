@@ -27,7 +27,9 @@ class Config:
     districts_data_path = "data/districts_data.json"
     dopusheni_data_path = "data/dopusheni_data.json"
     spiski_data_path = "data/spiski_data.json"
+    districts_info_path = "data/districts_info.json"
     parsing_interval = 60
+    districts_parsing_interval = 1800
     TOPIC_NAMES = {
         "new_removed_shifts": "Добавление/удаление смен",
         "dates": "Даты",
