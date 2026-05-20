@@ -318,6 +318,8 @@ async def parse_district(url: str) -> dict:
 
             if FIRST_DISTRICT in districts and districts[FIRST_DISTRICT].count(": ") >= 2:
                 districts[FIRST_DISTRICT] = districts[FIRST_DISTRICT].split(": ")[2]
+            if FIRST_DISTRICT in districts and districts[FIRST_DISTRICT].startswith("1 "):
+                districts[FIRST_DISTRICT] = districts[FIRST_DISTRICT][2:]
 
             return districts
 
