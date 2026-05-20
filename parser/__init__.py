@@ -107,11 +107,14 @@ def save_districts_data():
         json.dump(districts, f, indent=4, ensure_ascii=False)
 
 
-def save_districts_info():
+def save_districts_info(info: dict | None = None):
+    global districts_info
+    info = info if info else districts_info
+    districts_info = info
     if not _districts_info_path:
         raise FileExistsError("No data path")
     with open(_districts_info_path, "w", encoding="utf-8") as f:
-        json.dump(districts_info, f, indent=4, ensure_ascii=False)
+        json.dump(info, f, indent=4, ensure_ascii=False)
 
 
 async def parse() -> list:
@@ -495,3 +498,9 @@ def get_spiski(name: str | None = None):
     if name:
         return spiski.get(name)
     return spiski
+
+
+def get_districts_info(name: str | None = None):
+    if name:
+        return districts_info.get(name) # pyright: ignore[reportOptionalMemberAccess]
+    return districts_info

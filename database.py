@@ -41,7 +41,8 @@ def init_db():
             polozhenie BOOLEAN NOT NULL DEFAULT 1,
             dopusheni BOOLEAN NOT NULL DEFAULT 1,
             mesta_provedeniya BOOLEAN NOT NULL DEFAULT 1,
-            spiski BOOLEAN NOT NULL DEFAULT 1
+            spiski BOOLEAN NOT NULL DEFAULT 1,
+            directions NOT NULL DEFAULT 1
         )
     """)
     cursor.execute("""
@@ -123,7 +124,7 @@ def get_subscribers_by_topic(topic: str):
     """
     Возвращает данные о всех пользователях, для которых указанная тема рассылки активна.
     """
-    allowed_topics = ['new_removed_shifts', 'dates', 'polozhenie', 'dopusheni', 'mesta_provedeniya', 'spiski']
+    allowed_topics = ['new_removed_shifts', 'dates', 'polozhenie', 'dopusheni', 'mesta_provedeniya', 'spiski', "directions"]
     if topic not in allowed_topics:
         return []
 

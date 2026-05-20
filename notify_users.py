@@ -113,3 +113,51 @@ async def notify_all_users(bot: Bot, changes, new_spiski):
         await notify_about_spiski(bot, spisok)
 
     logging.info("Finished sending messages to all users.")
+
+
+async def notify_about_directions(bot: Bot, changes):
+
+    def generate_text(changes):
+        text = ""
+        if "added_directions" in changes:
+            if len(changes["added_directions"]) == 1:
+                text += f'<b>😲 В технопарке появилось новое направление:</b> {changes["added_directions"][0]["name"]}\n\n'
+            elif len(changes["added_directions"]) >1:
+                text += f'<b>😲 В технопарке появились новые направления:</b> {",".join([el["name"] for el in changes["added_directions"]])}\n\n'
+        if "removed_directions" in changes:
+            if len(changes["removed_directions"]) == 1:
+                text += f'<b>🗑 В технопарке удалили направление:</b> {changes["removed_directions"][0]["name"]}\n\n'
+            elif len(changes["removed_directions"]) >1:
+                text += f'<b>🗑 В технопарке удалили направления:</b> {",".join([el["name"] for el in changes["removed_directions"]])}\n\n'
+        if "modified_directions" in changes:
+            for el in changes["modified_directions"]:
+                text += f"<b>📝 На направлении {el["name"]}\n</b>"
+                if "added_programs" in el["changes"]:
+                    for name, _ in el["changes"]["added_programs"].items():
+                        text += f'добавлена учебная программа "{name}"\n'
+                if "removed_programs" in el["changes"]:
+                    for name, _ in el["changes"]["removed_programs"].items():
+                        text += f'удалена учебная программа "{name}"\n'
+                text += "\n"
+
+        text += "Выключить оповещения по этой теме можно в /subscriptions"
+        return text
+
+    text = generate_text(changes)
+    users = get_subscribers_by_topic("directions")
+
+    for user in users:
+        user_id = user["id"]
+
+        try:
+            await bot.send_message(
+                user_id, text, parse_mode="HTML", disable_web_page_preview=True
+            )
+        except TelegramForbiddenError:
+            logging.warning(f"User {user_id} has blocked the bot. Cannot send message.")
+        except TelegramBadRequest as e:
+            logging.error(f"Failed to send message to user {user_id}: {e}")
+        except Exception as e:
+            logging.error(
+                f"An unexpected error occurred while sending message to user {user_id}: {e}"
+            )

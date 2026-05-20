@@ -6,6 +6,11 @@ import ssl
 import certifi
 import re
 
+from aiogram import Bot
+import parser
+
+from notify_users import notify_about_directions
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -102,6 +107,7 @@ async def parse_educational_directions():
 
     return all_directions_data
 
+
 async def process_sub_page(url, title):
     """Fetches and parses a single sub-page."""
     logging.info(f"Processing sub-page: {url} (Title: {title})")
@@ -110,3 +116,85 @@ async def process_sub_page(url, title):
         direction_data = await parse_sub_page(sub_page_html)
         return title, direction_data
     return None, None
+
+
+async def parse_and_compare_districts(bot: Bot):
+    new_data = await parse_educational_directions()
+    old_data = parser.get_districts_info()
+
+    changes = compare(old_data, new_data) # pyright: ignore[reportArgumentType]
+
+    logging.info(f"Districts changes: {changes}")
+
+    if changes:
+        await notify_about_directions(bot, changes)
+        parser.save_districts_info(new_data)
+
+
+def compare(old_data: dict, new_data: dict):
+    """
+    Compares old and new educational directions data and identifies changes.
+    It tracks new/removed directions and new/removed programs within directions.
+    """
+    if old_data == new_data:
+        return None
+
+    changes = {
+        "added_directions": [],
+        "removed_directions": [],
+        "modified_directions": []
+    }
+
+    old_directions_keys = set(old_data.keys())
+    new_directions_keys = set(new_data.keys())
+
+    # Find added directions
+    for direction_name in new_directions_keys - old_directions_keys:
+        changes["added_directions"].append({
+            "name": direction_name,
+            "data": new_data[direction_name]
+        })
+
+    # Find removed directions
+    for direction_name in old_directions_keys - new_directions_keys:
+        changes["removed_directions"].append({
+            "name": direction_name,
+            "data": old_data[direction_name]
+        })
+
+    # Check for modified directions (changes in programs)
+    for direction_name in old_directions_keys & new_directions_keys:
+        old_direction = old_data.get(direction_name, {})
+        new_direction = new_data.get(direction_name, {})
+        modifications = {}
+
+        old_programs = old_direction.get("programs", {})
+        new_programs = new_direction.get("programs", {})
+
+        old_program_keys = set(old_programs.keys())
+        new_program_keys = set(new_programs.keys())
+
+        added_programs = new_program_keys - old_program_keys
+        removed_programs = old_program_keys - new_program_keys
+
+        if added_programs:
+            modifications["added_programs"] = {
+                prog: new_programs[prog] for prog in added_programs
+            }
+        if removed_programs:
+            modifications["removed_programs"] = {
+                prog: old_programs[prog] for prog in removed_programs
+            }
+
+        if modifications:
+            changes["modified_directions"].append({
+                "name": direction_name,
+                "changes": modifications
+            })
+
+    # Return None if no changes were found, filtering out empty lists
+    final_changes = {k: v for k, v in changes.items() if v}
+    if not final_changes:
+        return None
+
+    return final_changes

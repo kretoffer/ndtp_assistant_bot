@@ -37,6 +37,7 @@ class Config:
         "dopusheni": "Допущенные к тестам",
         "mesta_provedeniya": "Места проведения",
         "spiski": "Поступившие",
+        "directions": "Образовательные программы"
     }
 
 

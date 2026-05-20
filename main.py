@@ -15,6 +15,7 @@ from handlers import (
 )
 
 from parser import init_parser, parse_and_compare
+from parser.districts_info_parser import parse_and_compare_districts
 
 logging.basicConfig(level=logging.INFO)
 
@@ -55,6 +56,9 @@ async def main():
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
         parse_and_compare, "interval", args=(bot,), seconds=config.parsing_interval
+    )
+    scheduler.add_job(
+        parse_and_compare_districts, "interval", args=(bot,), seconds=config.districts_parsing_interval
     )
     scheduler.start()
 
