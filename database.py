@@ -42,7 +42,7 @@ def init_db():
             dopusheni BOOLEAN NOT NULL DEFAULT 1,
             mesta_provedeniya BOOLEAN NOT NULL DEFAULT 1,
             spiski BOOLEAN NOT NULL DEFAULT 1,
-            directions NOT NULL DEFAULT 1
+            directions NOT NULL DEFAULT 0
         )
     """)
     cursor.execute("""
