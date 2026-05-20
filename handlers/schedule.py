@@ -6,8 +6,8 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKe
 import html
 
 from keyboards.schedule_keyboards import get_schedule_keyboard, get_regions_keyboard
-from keyboards import get_back_markup
-from parser import get_old_data, get_districts, get_spiski
+from keyboards import get_back_button, get_back_markup
+from parser import get_old_data, get_districts, get_spiski, get_districts_info
 from database import get_user_by_name, check_username, add_user
 
 from tools import get_from_user_and_answer_from_update
@@ -35,14 +35,23 @@ async def show_districts(callback: CallbackQuery):
         name = get_old_data()[shift_index]["name"]
         text = f"📌 <b>{name}\nОбразовательные направления:</b>\n\n"
         programs = get_districts(name)
+        districts_info = get_districts_info()
+        districts_names = list(districts_info.keys()) # pyright: ignore[reportOptionalMemberAccess]
+        buttons = []
         if programs:
             for district, program in programs.items():
+                if district in districts_names:
+                    programs_names = list(districts_info[district]["programs"].keys()) # pyright: ignore[reportOptionalSubscript]
+                    if program in programs_names:
+                        buttons.append(InlineKeyboardButton(text=program, callback_data=f"direction_info:{districts_names.index(district)}:{programs_names.index(program)}:districts:{shift_index}"))
                 if district == "Информационные и компьютерные технологии":
                     district = f"⚠️⚠️⚠️ {district} ⚠️⚠️⚠️"
                 if program in ("Искусственный интеллект", "Прототипирование", "Цифровой ритейл"):
                     program = f"⛔️ {program} ⛔️"
                 text += f"{district} — {program}\n"
-        await callback.message.answer(text, parse_mode="HTML", reply_markup=get_back_markup(f"shift-info:{shift_index}"))
+        buttons.append(get_back_button(f"shift-info:{shift_index}"))
+        markup = InlineKeyboardMarkup(inline_keyboard=[[el] for el in buttons])
+        await callback.message.answer(text, parse_mode="HTML", reply_markup=markup)
     await callback.answer()
 
 

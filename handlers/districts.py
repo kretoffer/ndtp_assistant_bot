@@ -18,9 +18,14 @@ districts_router = Router()
 @districts_router.message(Command("districts"))
 @districts_router.callback_query(lambda c: c.data == "districts")
 async def districts(update: Union[Message, CallbackQuery]):
-    from_user, answer = get_from_user_and_answer_from_update(update)
-    if not from_user or not answer:
+    from_user, answer = get_from_user_and_answer_from_update(update) # pyright: ignore[reportAssignmentType]
+    if not from_user:
         return
+    if isinstance(update, CallbackQuery):
+        async def answer(text: str, reply_markup):
+            await update.message.answer(text=text, reply_markup=reply_markup) # pyright: ignore[reportOptionalMemberAccess]
+            await update.message.delete() # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+
     check_username(from_user.id, from_user.username)
     text = "👀 Выберите направление о котором хотите узнать"
 
@@ -50,6 +55,8 @@ async def direction_info(callback: CallbackQuery):
         programs = direction["programs"]
         programs_names = sorted(programs.keys())
 
+        back = ":".join(args[3:]) if len(args) > 3 else f"direction_info:{direction_index}"
+
         if len(args) == 2:
             buttons = [InlineKeyboardButton(text=name, callback_data=f"direction_info:{direction_index}:{id}") for id, name in enumerate(programs_names)]
             buttons.append(InlineKeyboardButton(text="🔙 Назад", callback_data="districts"))
@@ -63,14 +70,14 @@ async def direction_info(callback: CallbackQuery):
             await callback.message.delete() # pyright: ignore[reportAttributeAccessIssue]
             await answer_with_random_img(callback.message.answer, callback.message.answer_photo, direction_name, text, markup)
 
-        elif len(args) == 3:
+        elif len(args) >= 3:
             program_index = int(args[2])
             program_name = programs_names[program_index]
             program = programs[program_name]
 
             text = f"<b>{direction_name}\n\n{program_name}</b>\n\n{program}"
 
-            markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data=f"direction_info:{direction_index}")]])
+            markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data=back)]])
 
             await callback.message.answer(text, parse_mode="HTML", reply_markup=markup)
             await callback.message.delete() # pyright: ignore[reportAttributeAccessIssue]
