@@ -79,7 +79,15 @@ async def notify_about_spiski(bot: Bot, spisok_info: dict):
             elif user := get_user_by_surname(person["surname"]):
                 message = f"👋 Хей, нашел фамилию {person['surname']} в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
             if user:
-                await bot.send_message(user["id"], message, parse_mode="HTML") # pyright: ignore[reportPossiblyUnboundVariable]
+                user_id = user["id"] # pyright: ignore[reportPossiblyUnboundVariable]
+                try:
+                    await bot.send_message(user_id, message, parse_mode="HTML") # pyright: ignore[reportPossiblyUnboundVariable]
+                except TelegramForbiddenError:
+                    logging.warning(f"User {user_id} has blocked the bot. Cannot send message.")
+                except TelegramBadRequest as e:
+                    logging.error(f"Failed to send message to user {user_id}: {e}")
+                except Exception as e:
+                    logging.error(f"An unexpected error occurred while sending message to user {user_id}: {e}")
 
 
 async def notify_all_users(bot: Bot, changes, new_spiski):
