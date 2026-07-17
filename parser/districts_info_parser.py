@@ -10,8 +10,7 @@ import parser
 
 from notify_users import notify_about_directions
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 MAIN_PAGE_URL = "https://ndtp.by/educational_directions/"
 
@@ -22,10 +21,10 @@ async def fetch_page(url):
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
             async with session.get(url) as response:
                 response.raise_for_status()
-                logging.info(f"Successfully fetched: {url}")
+                logger.info(f"Successfully fetched: {url}")
                 return await response.text()
     except aiohttp.ClientError as e:
-        logging.error(f"Error fetching {url}: {e}")
+        logger.error(f"Error fetching {url}: {e}")
         return None
 
 async def parse_main_page(html_content):
@@ -89,7 +88,7 @@ async def parse_educational_directions():
     all_directions_data = {}
     main_page_html = await fetch_page(MAIN_PAGE_URL)
     if not main_page_html:
-        logging.error("Failed to fetch main page HTML.")
+        logger.error("Failed to fetch main page HTML.")
         return all_directions_data
 
     sub_page_infos = await parse_main_page(main_page_html)
@@ -104,7 +103,7 @@ async def parse_educational_directions():
 
 async def process_sub_page(url, title):
     """Fetches and parses a single sub-page."""
-    logging.info(f"Processing sub-page: {url} (Title: {title})")
+    logger.info(f"Processing sub-page: {url} (Title: {title})")
     sub_page_html = await fetch_page(url)
     if sub_page_html:
         direction_data = await parse_sub_page(sub_page_html)
@@ -118,7 +117,7 @@ async def parse_and_compare_districts(bot: Bot):
 
     changes = compare(old_data, new_data) # pyright: ignore[reportArgumentType]
 
-    logging.info(f"Districts changes: {changes}")
+    logger.info(f"Districts changes: {changes}")
 
     if changes:
         await notify_about_directions(bot, changes)

@@ -1,9 +1,11 @@
 import logging
 import html
+
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
-
 from database import get_subscribers_by_topic, get_all_users, get_user_by_name, get_user_by_surname
+
+logger = logging.getLogger(__name__)
 
 DOC_NAME = "Положение об образовательной смене"
 SPISKI_DOPUSCHENNYH_START_WITH = "Списочный состав участников, допущенных ко второму этапу"
@@ -83,11 +85,11 @@ async def notify_about_spiski(bot: Bot, spisok_info: dict):
                 try:
                     await bot.send_message(user_id, message, parse_mode="HTML") # pyright: ignore[reportPossiblyUnboundVariable]
                 except TelegramForbiddenError:
-                    logging.warning(f"User {user_id} has blocked the bot. Cannot send message.")
+                    logger.warning(f"User {user_id} has blocked the bot. Cannot send message.")
                 except TelegramBadRequest as e:
-                    logging.error(f"Failed to send message to user {user_id}: {e}")
+                    logger.error(f"Failed to send message to user {user_id}: {e}")
                 except Exception as e:
-                    logging.error(f"An unexpected error occurred while sending message to user {user_id}: {e}")
+                    logger.error(f"An unexpected error occurred while sending message to user {user_id}: {e}")
 
 
 async def notify_all_users(bot: Bot, changes, new_spiski):
@@ -102,7 +104,7 @@ async def notify_all_users(bot: Bot, changes, new_spiski):
         if "added_docs" in modified_shift["changes"]:
             users.update(get_users_for_docs(modified_shift["changes"]["added_docs"]))
     text = generate_message_text(changes)
-    logging.info(f"Starting to send message to {len(users)} users.")
+    logger.info(f"Starting to send message to {len(users)} users.")
 
     for user in users:
         user_id = user["id"]
@@ -111,18 +113,18 @@ async def notify_all_users(bot: Bot, changes, new_spiski):
                 user_id, text, parse_mode="HTML", disable_web_page_preview=True
             )
         except TelegramForbiddenError:
-            logging.warning(f"User {user_id} has blocked the bot. Cannot send message.")
+            logger.warning(f"User {user_id} has blocked the bot. Cannot send message.")
         except TelegramBadRequest as e:
-            logging.error(f"Failed to send message to user {user_id}: {e}")
+            logger.error(f"Failed to send message to user {user_id}: {e}")
         except Exception as e:
-            logging.error(
+            logger.error(
                 f"An unexpected error occurred while sending message to user {user_id}: {e}"
             )
 
     for spisok in new_spiski:
         await notify_about_spiski(bot, spisok)
 
-    logging.info("Finished sending messages to all users.")
+    logger.info("Finished sending messages to all users.")
 
 
 async def notify_about_directions(bot: Bot, changes):
@@ -164,10 +166,10 @@ async def notify_about_directions(bot: Bot, changes):
                 user_id, text, parse_mode="HTML", disable_web_page_preview=True
             )
         except TelegramForbiddenError:
-            logging.warning(f"User {user_id} has blocked the bot. Cannot send message.")
+            logger.warning(f"User {user_id} has blocked the bot. Cannot send message.")
         except TelegramBadRequest as e:
-            logging.error(f"Failed to send message to user {user_id}: {e}")
+            logger.error(f"Failed to send message to user {user_id}: {e}")
         except Exception as e:
-            logging.error(
+            logger.error(
                 f"An unexpected error occurred while sending message to user {user_id}: {e}"
             )

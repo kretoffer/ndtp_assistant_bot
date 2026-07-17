@@ -11,8 +11,9 @@ import ssl
 import certifi
 
 from notify_users import notify_all_users
-
 from parser.districts_info_parser import parse_educational_directions
+
+logger = logging.getLogger(__name__)
 
 
 _old_data_path = None
@@ -263,7 +264,7 @@ async def parse_and_compare(bot: Bot):
     global districts
     new_data = await parse()
     changes = compare(new_data)
-    logging.info(f"Changes: {changes}")
+    logger.info(f"Changes: {changes}")
     if changes:
         await notify_all_users(bot, *changes)
         districts = await parse_all_districts()
@@ -271,7 +272,7 @@ async def parse_and_compare(bot: Bot):
 
 
 async def parse_district(url: str) -> dict:
-    logging.info(f"Found URL: {url}")
+    logger.info(f"Found URL: {url}")
     if not url:
         return {}
 
@@ -289,7 +290,7 @@ async def parse_district(url: str) -> dict:
                         if page_text:
                             text += page_text + "\n"
             except Exception as e:
-                logging.error(f"Failed to parse PDF with pdfplumber: {e}")
+                logger.error(f"Failed to parse PDF with pdfplumber: {e}")
                 return {}
 
             # Clean up text by splitting on any whitespace and rejoining with single spaces.
@@ -364,18 +365,18 @@ def get_user(fio, school_and_class, is_spiski = False):
             user["district"] = district
         return user
     except Exception as e:
-        logging.error(f"Could not parse row: {fio} {school_and_class}, error: {e}")
+        logger.error(f"Could not parse row: {fio} {school_and_class}, error: {e}")
 
 
 async def parse_spisok(url: str, is_spisok = False) -> dict:
     dopusheni_data = {}
 
-    logging.info(f"Parsing dopusheni from {url}")
+    logger.info(f"Parsing dopusheni from {url}")
     try:
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=certifi.where()))) as session:
             async with session.get(url) as response:
                 if response.status != 200:
-                    logging.warning(
+                    logger.warning(
                         f"Failed to fetch {url}, status: {response.status}"
                     )
                     return {}
@@ -453,14 +454,14 @@ async def parse_spisok(url: str, is_spisok = False) -> dict:
                         school+=valid_row[0]
                         peoples[-1] = get_user(fio, school, is_spisok)
                     else:
-                        logging.warning(f"Unprocessed row: {row}")
+                        logger.warning(f"Unprocessed row: {row}")
                 else:
-                    logging.warning(f"Unprocessed row: {row}")
+                    logger.warning(f"Unprocessed row: {row}")
             if region and peoples:
                 dopusheni_data[region] = peoples
 
     except Exception as e:
-        logging.error(f"Error processing {url}: {e}", exc_info=True)
+        logger.error(f"Error processing {url}: {e}", exc_info=True)
 
     return dopusheni_data
 

@@ -1,3 +1,4 @@
+import logging
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
@@ -5,6 +6,8 @@ from aiogram.fsm.state import State, StatesGroup
 
 from config import Config, load_config
 from database import get_all_users
+
+logger = logging.getLogger(__name__)
 
 config: Config = load_config()
 
@@ -28,6 +31,6 @@ async def process_broadcast_message(message: Message, state: FSMContext):
         try:
             await message.copy_to(user['id'])
         except Exception as e:
-            print(f"Failed to send message to user {user['id']}: {e}")
+            logger.warning(f"Failed to send message to user {user['id']}: {e}")
     await message.answer("Рассылка завершена.")
     await state.clear()

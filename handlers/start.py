@@ -1,3 +1,4 @@
+import logging
 from typing import Union
 
 from aiogram import Router
@@ -9,8 +10,9 @@ from aiogram.fsm.state import State, StatesGroup
 from config import Config
 from database import add_user, check_username, get_user_by_id, update_user_name
 from keyboards.cancel_keyboard import cancel_keyboard
-
 from tools import get_from_user_and_answer_from_update
+
+logger = logging.getLogger(__name__)
 
 
 class Registration(StatesGroup):
@@ -92,6 +94,6 @@ async def reg_user_name(message: Message, name, surname, config: Config, state: 
         await message.answer(f"{config.messages.registration_successful}, {surname} {name}\n\nЧтобы поменять имя /edit_name")
     except Exception as e:
         await message.answer(config.messages.error_occured)
-        print(e)
+        logger.error(e, exc_info=True)
     finally:
         await state.clear()

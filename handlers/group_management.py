@@ -4,6 +4,8 @@ from aiogram.types import Message
 
 from database import add_group, remove_group
 
+logger = logging.getLogger(__name__)
+
 group_managment_router = Router()
 
 
@@ -15,7 +17,7 @@ async def on_group_join(message: Message, bot: Bot):
         if member.id == bot.id:
             group_id = message.chat.id
             add_group(group_id)
-            logging.info(f"Bot was added to group {group_id}")
+            logger.info(f"Bot was added to group {group_id}")
             await message.answer(
                 "Спасибо за добавление в группу! "\
                 "Я буду присылать сюда уведомления об изменениях в календаре образовательных смен"
@@ -30,4 +32,4 @@ async def on_group_leave(message: Message, bot: Bot):
     if message.left_chat_member.id == bot.id:
         group_id = message.chat.id
         remove_group(group_id)
-        logging.info(f"Bot was removed from group {group_id}")
+        logger.info(f"Bot was removed from group {group_id}")

@@ -26,6 +26,7 @@ class Config:
     admin_id: int
     messages: Messages
     db_path: str = "data/database.db"
+    log_path: str = "logs/log"
     old_data_path = "data/old_data.json"
     districts_data_path = "data/districts_data.json"
     dopusheni_data_path = "data/dopusheni_data.json"

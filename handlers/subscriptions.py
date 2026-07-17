@@ -11,7 +11,10 @@ from database import (
 import logging
 
 from config import Config
+
 from keyboards.subscriptions_keyboards import get_subscription_keyboard
+
+logger = logging.getLogger(__name__)
 
 subscriptions_router = Router()
 
@@ -69,4 +72,4 @@ async def toggle_subscription_handler(callback_query: CallbackQuery, config: Con
 
     except Exception as e:
         await callback_query.answer(config.messages.error_occured, show_alert=True)
-        logging.error(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")

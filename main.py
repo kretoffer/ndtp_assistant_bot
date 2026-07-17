@@ -17,8 +17,9 @@ from handlers import (
 
 from parser import init_parser, parse_and_compare
 from parser.districts_info_parser import parse_and_compare_districts
+from logger import setup_logging
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 async def on_startup(dispatcher: Dispatcher):
@@ -39,6 +40,7 @@ async def on_shutdown(dispatcher: Dispatcher):
 
 async def main():
     config = load_config()
+    setup_logging(config.log_path)
 
     storage = MemoryStorage()
 
