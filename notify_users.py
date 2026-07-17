@@ -71,9 +71,11 @@ async def notify_about_spiski(bot: Bot, spisok_info: dict):
     for district_name, district in spisok.items():
         for person in district:
             if user := get_user_by_name(person["name"], person["surname"]):
-                message = f"👋 Хей, {person['surname']} {person["name"]}, нашел тебя в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name} "
-                district_dir = get_districts(spisok_info["shift"])[district_name] # pyright: ignore[reportOptionalSubscript]
-                message += f"({district_dir})" if spisok_info['is_spiski'] and district_dir != district_name else ""
+                message = f"👋 Хей, {person['surname']} {person["name"]}, нашел тебя в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
+                if spisok_info['is_spiski']:
+                    district_dir = get_districts(spisok_info["shift"]).get(district_name) # pyright: ignore[reportOptionalMemberAccess]
+                    if district_dir and district_dir != district_name:
+                        message += f" ({district_dir})"
             elif user := get_user_by_surname(person["surname"]):
                 message = f"👋 Хей, нашел фамилию {person['surname']} в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
             if user:

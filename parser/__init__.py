@@ -393,7 +393,7 @@ async def parse_spisok(url: str, is_spisok = False) -> dict:
             region = None
             peoples = []
             for row in data:
-                if len(row) >= 3 and row[0] and all([not bool(row[i]) for i in range(1, len(row))]):
+                if len(row) >= 3 and row[0] and not re.match(r'^\d+\.\s*$', str(row[0])) and all([not bool(row[i]) for i in range(1, len(row))]):
                     if region:
                         dopusheni_data[region] = peoples
                     peoples = []
@@ -402,7 +402,7 @@ async def parse_spisok(url: str, is_spisok = False) -> dict:
                         region = region .split("«")[1].rsplit("»")[0].replace("\n", " ")
                 elif len(row) == 3 and (row[0].startswith("№") or row[1] == "ФИО" or row[2] == "Учреждение образования, класс"): # pyright: ignore[reportOptionalMemberAccess]
                     continue
-                elif len(row) >= 3 and not row[0] and peoples:
+                elif len(row) >= 3 and not row[0] and not row[1] and peoples:
                     valid_row = [el for el in row if el]
                     if len(valid_row) == 2:
                         people = peoples[-1]
@@ -429,16 +429,18 @@ async def parse_spisok(url: str, is_spisok = False) -> dict:
                                 valid_row.append(el)
                     else:
                         valid_row = new_row
-                    if new_row[0].startswith("Образовательное направление"):
+                    if new_row and new_row[0].startswith("Образовательное направление"):
                         if region:
                             dopusheni_data[region] = peoples
                         peoples = []
                         region = new_row[1]
                         continue
-                    if valid_row[1] == "ФИО":
+                    if len(valid_row) >= 2 and valid_row[1] == "ФИО":
                         continue
                     if len(valid_row) == 3:
                         peoples.append(get_user(valid_row[1], valid_row[2], is_spisok))
+                    elif len(valid_row) == 2:
+                        peoples.append(get_user(valid_row[0], valid_row[1], is_spisok))
                     elif len(valid_row) == 1 and not row[0] and peoples:
                         people = peoples[-1]
                         fio = " ".join((people["surname"], people["name"], people["patronymic"])) # pyright: ignore[reportOptionalSubscript]
