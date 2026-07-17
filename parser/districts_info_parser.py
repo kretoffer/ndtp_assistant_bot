@@ -1,5 +1,4 @@
 import aiohttp
-import asyncio
 from bs4 import BeautifulSoup
 import logging
 import ssl
@@ -95,13 +94,8 @@ async def parse_educational_directions():
 
     sub_page_infos = await parse_main_page(main_page_html)
 
-    tasks = []
     for info in sub_page_infos:
-        tasks.append(process_sub_page(info['url'], info['title']))
-
-    results = await asyncio.gather(*tasks)
-
-    for direction_title, direction_data in results:
+        direction_title, direction_data = await process_sub_page(info['url'], info['title'])
         if direction_title and direction_data:
             all_directions_data[direction_title] = direction_data
 
