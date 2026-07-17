@@ -18,6 +18,7 @@ class Messages:
     registration_successful: str = "🤓 Теперь буду тебя знать"
     error_occured: str = "🤓 Произошла ошибка, попробуй еще раз"
     subscriptions: str = "✅ - подписаны (вам будут приходить сообщения по этой теме)\n❌ - не подписаны (сообщения приходить не будут)\n\n<b>Ваши подписки на события:</b>"
+    fallback_message: str = "Извините, я вас не понял 😔"
 
 
 @dataclass

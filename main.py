@@ -12,7 +12,8 @@ from handlers import (
     subscriptions_router,
     group_managment_router,
     districts_router,
-    broadcast_router
+    broadcast_router,
+    fallback_router
 )
 
 from parser import init_parser, parse_and_compare
@@ -56,6 +57,7 @@ async def main():
     dp.include_router(group_managment_router)
     dp.include_router(districts_router)
     dp.include_router(broadcast_router)
+    dp.include_router(fallback_router)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
@@ -66,7 +68,7 @@ async def main():
     )
     scheduler.start()
 
-    await bot.delete_webhook(drop_pending_updates=True)
+    await bot.delete_webhook(drop_pending_updates=False)
     await dp.start_polling(bot)
 
 
