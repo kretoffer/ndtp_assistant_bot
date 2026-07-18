@@ -1,5 +1,6 @@
 from typing import Literal
 
+from database import get_user_by_name
 from parser import get_dopusheni, get_spiski
 
 
@@ -60,3 +61,30 @@ def search_persons(
         results = results[offset:offset + limit]
 
     return results, total
+
+
+def get_person_profile(surname: str, name: str) -> dict | None:
+    profile: dict = {
+        "surname": surname,
+        "name": name,
+        "shifts": {},
+    }
+
+    user = get_user_by_name(name, surname)
+    if user:
+        profile["user"] = dict(user)
+
+    for list_type, source in (("dopusheni", get_dopusheni(None)), ("spiski", get_spiski(None))):
+        if not source:
+            continue
+        for shift_name, regions in source.items():
+            for region, persons in regions.items():
+                for person in persons:
+                    if person.get("surname") == surname and person.get("name") == name:
+                        entry = profile["shifts"].setdefault(shift_name, {})
+                        entry.setdefault(list_type, []).append(region)
+                        profile["patronymic"] = person.get("patronymic") or ""
+                        if person.get("education"):
+                            profile["education"] = person["education"]
+
+    return profile if profile["shifts"] else None

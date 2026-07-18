@@ -9,12 +9,13 @@ def setup(ttl: int):
     _ttl = ttl
 
 
-def store(user_id: int, shift_index: int, query: str, results: list, total: int):
+def store(user_id: int, shift_index: int | None, query: str, results: list, total: int, current_page: int = 0):
     _cache[user_id] = {
         "shift_index": shift_index,
         "query": query,
         "results": results,
         "total": total,
+        "current_page": current_page,
         "timestamp": time.time(),
     }
 
@@ -24,6 +25,11 @@ def get(user_id: int) -> dict | None:
     if entry and time.time() - entry["timestamp"] < _ttl:
         return entry
     return None
+
+
+def update_page(user_id: int, page: int):
+    if user_id in _cache:
+        _cache[user_id]["current_page"] = page
 
 
 def cleanup_expired():
