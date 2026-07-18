@@ -35,6 +35,8 @@ class Config:
     districts_info_path = "data/districts_info.json"
     parsing_interval = 60
     districts_parsing_interval = 1800
+    search_cache_ttl: int = 300
+    search_cache_cleanup_interval: int = 60
     TOPIC_NAMES = {
         "new_removed_shifts": "Добавление/удаление смен",
         "dates": "Даты",

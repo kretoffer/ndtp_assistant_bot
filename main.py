@@ -18,6 +18,7 @@ from handlers import (
 
 from parser import init_parser, parse_and_compare
 from parser.districts_info_parser import parse_and_compare_districts
+from tools.search_cache import setup as setup_search_cache, cleanup_expired
 from logger import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 async def on_startup(dispatcher: Dispatcher):
     get_db_connection(dispatcher["config"].db_path)
     init_db()
+    setup_search_cache(dispatcher["config"].search_cache_ttl)
     await init_parser(
         dispatcher["config"].old_data_path,
         dispatcher["config"].districts_data_path,
@@ -65,6 +67,9 @@ async def main():
     )
     scheduler.add_job(
         parse_and_compare_districts, "interval", args=(bot,), seconds=config.districts_parsing_interval
+    )
+    scheduler.add_job(
+        cleanup_expired, "interval", seconds=config.search_cache_cleanup_interval
     )
     scheduler.start()
 
