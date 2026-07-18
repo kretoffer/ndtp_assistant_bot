@@ -9,6 +9,7 @@ from aiogram import Bot
 import parser
 
 from notify_users import notify_about_directions
+from tools.retry import retry as _retry
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +18,15 @@ MAIN_PAGE_URL = "https://ndtp.by/educational_directions/"
 async def fetch_page(url):
     """Fetches the HTML content of a given URL asynchronously."""
     try:
-        ssl_context = ssl.create_default_context(cafile=certifi.where())
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
-            async with session.get(url) as response:
-                response.raise_for_status()
-                logger.info(f"Successfully fetched: {url}")
-                return await response.text()
-    except aiohttp.ClientError as e:
+        async def _do():
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    logger.info(f"Successfully fetched: {url}")
+                    return await response.text()
+        return await _retry(_do, name=url)
+    except Exception as e:
         logger.error(f"Error fetching {url}: {e}")
         return None
 
@@ -97,6 +100,9 @@ async def parse_educational_directions():
         direction_title, direction_data = await process_sub_page(info['url'], info['title'])
         if direction_title and direction_data:
             all_directions_data[direction_title] = direction_data
+        else:
+            logger.error("Failed to fetch sub-page: %s, aborting districts cycle", info['title'])
+            return {}
 
     return all_directions_data
 
@@ -113,6 +119,10 @@ async def process_sub_page(url, title):
 
 async def parse_and_compare_districts(bot: Bot):
     new_data = await parse_educational_directions()
+    if not new_data:
+        logger.warning("Districts parse returned empty, skipping comparison")
+        return
+
     old_data = parser.get_districts_info()
 
     changes = compare(old_data, new_data) # pyright: ignore[reportArgumentType]

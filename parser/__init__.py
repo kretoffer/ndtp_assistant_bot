@@ -12,6 +12,7 @@ import certifi
 
 from notify_users import notify_all_users
 from parser.districts_info_parser import parse_educational_directions
+from tools.retry import retry as _retry
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,11 @@ FIRST_DISTRICT = "Авиакосмические технологии"
 
 
 async def fetch(url):
-    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=certifi.where()))) as session:
-        async with session.get(url) as response:
-            return await response.text()
+    async def _do():
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=certifi.where()))) as session:
+            async with session.get(url) as response:
+                return await response.text()
+    return await _retry(_do, name=url)
 
 
 async def init_parser(old_data_path: str, districts_data_path: str, dopusheni_data_path: str, spiski_data_path: str,\
@@ -120,7 +123,7 @@ def save_districts_info(info: dict | None = None):
 
 async def parse() -> list:
     data = await fetch("https://ndtp.by/schedule/")
-    soup = BeautifulSoup(data, "lxml")
+    soup = BeautifulSoup(data, "lxml") # type: ignore
 
     schedule = []
 
