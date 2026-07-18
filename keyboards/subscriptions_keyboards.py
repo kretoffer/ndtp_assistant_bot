@@ -12,7 +12,10 @@ def get_subscription_keyboard(user_id: int, topic_names):
 
     if subscriptions:
         for topic, name in topic_names.items():
-            status_icon = "✅" if subscriptions[topic] else "❌"
+            try:
+                status_icon = "✅" if subscriptions[topic] else "❌"
+            except (IndexError, KeyError):
+                continue
             builder.button(
                 text=f"{status_icon} {name}", callback_data=f"toggle_subscription:{topic}"
             )

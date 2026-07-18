@@ -1,7 +1,10 @@
 import sqlite3
 import os
+import logging
 
 _connection = None
+
+logger = logging.getLogger(__name__)
 
 
 def get_db_connection(db_path="data/database.db"):
@@ -20,7 +23,7 @@ def close_db_connection():
         _connection = None
 
 
-def init_db():
+def init_db(topic_names: dict | None = None):
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -50,6 +53,17 @@ def init_db():
             group_id INTEGER PRIMARY KEY
         )
     """)
+
+    if topic_names:
+        cursor.execute("PRAGMA table_info(subscriptions)")
+        existing = {row[1] for row in cursor.fetchall()}
+        for topic in topic_names:
+            if topic not in existing:
+                logger.info(f"Adding column '{topic}' to subscriptions table")
+                cursor.execute(
+                    f"ALTER TABLE subscriptions ADD COLUMN {topic} INTEGER NOT NULL DEFAULT 1"
+                )
+
     conn.commit()
 
 

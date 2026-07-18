@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 async def on_startup(dispatcher: Dispatcher):
     get_db_connection(dispatcher["config"].db_path)
-    init_db()
+    init_db(topic_names=dispatcher["config"].TOPIC_NAMES)
     setup_search_cache(dispatcher["config"].search_cache_ttl)
     await init_parser(
         dispatcher["config"].old_data_path,
