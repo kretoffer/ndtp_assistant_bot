@@ -45,6 +45,7 @@ class Config:
         "dopusheni": "Допущенные к тестам",
         "mesta_provedeniya": "Места проведения",
         "spiski": "Поступившие",
+        "application_reminders": "Напоминания о подаче заявок",
         #"directions": "Образовательные программы"
     }
 

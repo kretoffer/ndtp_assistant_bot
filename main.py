@@ -20,6 +20,7 @@ from handlers import (
 from parser import init_parser, parse_and_compare
 from parser.districts_info_parser import parse_and_compare_districts
 from tools.search_cache import setup as setup_search_cache, cleanup_expired
+from tools.feed_reminder import check_and_send_reminders
 from logger import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,9 @@ async def main():
     )
     scheduler.add_job(
         cleanup_expired, "interval", seconds=config.search_cache_cleanup_interval
+    )
+    scheduler.add_job(
+        check_and_send_reminders, "cron", args=(bot,), hour=12
     )
     scheduler.start()
 
