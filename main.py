@@ -10,6 +10,7 @@ from handlers import (
     start_router,
     schedule_router,
     search_router,
+    admin_router,
     subscriptions_router,
     group_managment_router,
     districts_router,
@@ -58,6 +59,7 @@ async def main():
     dp.include_router(start_router)
     dp.include_router(schedule_router)
     dp.include_router(search_router)
+    dp.include_router(admin_router)
     dp.include_router(subscriptions_router)
     dp.include_router(group_managment_router)
     dp.include_router(districts_router)

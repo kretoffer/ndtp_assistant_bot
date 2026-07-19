@@ -9,7 +9,7 @@ def setup_logging(log_path: str, log_level: int = logging.INFO):
     )
 
     file_handler = TimedRotatingFileHandler(
-        log_path, when='midnight', backupCount=7, encoding='utf-8'
+        log_path, when='midnight', backupCount=30, encoding='utf-8'
     )
     file_handler.setFormatter(formatter)
 

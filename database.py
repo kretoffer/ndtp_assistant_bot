@@ -11,7 +11,7 @@ def get_db_connection(db_path="data/database.db"):
     global _connection
     if _connection is None:
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        _connection = sqlite3.connect(db_path)
+        _connection = sqlite3.connect(db_path, check_same_thread=False)
         _connection.row_factory = sqlite3.Row
     return _connection
 
