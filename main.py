@@ -13,10 +13,12 @@ from handlers import (
     admin_router,
     subscriptions_router,
     group_managment_router,
+    group_settings_router,
     districts_router,
     broadcast_router,
     errors_router,
-    fallback_router
+    fallback_router,
+    voice_router,
 )
 
 from parser import init_parser, parse_and_compare
@@ -30,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 async def on_startup(dispatcher: Dispatcher):
     get_db_connection(dispatcher["config"].db_path)
-    init_db(topic_names=dispatcher["config"].TOPIC_NAMES)
+    init_db(topic_names=dispatcher["config"].TOPIC_NAMES, group_settings=dispatcher["config"].GROUP_SETTINGS)
     setup_search_cache(dispatcher["config"].search_cache_ttl)
     await init_parser(
         dispatcher["config"].old_data_path,
@@ -63,9 +65,11 @@ async def main():
     dp.include_router(admin_router)
     dp.include_router(subscriptions_router)
     dp.include_router(group_managment_router)
+    dp.include_router(group_settings_router)
     dp.include_router(districts_router)
     dp.include_router(broadcast_router)
     dp.include_router(errors_router)
+    dp.include_router(voice_router)
     dp.include_router(fallback_router)
 
     scheduler = AsyncIOScheduler()

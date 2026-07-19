@@ -26,6 +26,7 @@ class Messages:
 class Config:
     token: str
     admin_id: int
+    groq_api_key: str
     messages: Messages
     db_path: str = "data/database.db"
     log_path: str = "logs/log"
@@ -38,6 +39,10 @@ class Config:
     districts_parsing_interval = 1800
     search_cache_ttl: int = 300
     search_cache_cleanup_interval: int = 60
+    GROUP_SETTINGS = {
+        "voice_to_text": "Голосовые в текст",
+    }
+
     TOPIC_NAMES = {
         "new_removed_shifts": "Добавление/удаление смен",
         "dates": "Даты",
@@ -58,9 +63,11 @@ def load_config() -> Config:
     admin_id = os.getenv("ADMIN_ID")
     if not admin_id:
         raise ValueError("Haven't ADMIN_ID in .env")
+    groq_api_key = os.getenv("GROQ_API_KEY", "")
     return Config(
         token=token,
         admin_id=int(admin_id),
+        groq_api_key=groq_api_key,
         messages=Messages(),
         db_path=os.getenv("DB_PATH", "data/database.db"),
     )
