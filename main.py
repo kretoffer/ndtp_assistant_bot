@@ -15,6 +15,7 @@ from handlers import (
     group_managment_router,
     districts_router,
     broadcast_router,
+    errors_router,
     fallback_router
 )
 
@@ -64,6 +65,7 @@ async def main():
     dp.include_router(group_managment_router)
     dp.include_router(districts_router)
     dp.include_router(broadcast_router)
+    dp.include_router(errors_router)
     dp.include_router(fallback_router)
 
     scheduler = AsyncIOScheduler()
@@ -82,7 +84,11 @@ async def main():
     scheduler.start()
 
     await bot.delete_webhook(drop_pending_updates=False)
-    await dp.start_polling(bot)
+
+    try:
+        await dp.start_polling(bot)
+    except Exception:
+        logger.exception("Dispatcher polling crashed")
 
 
 if __name__ == "__main__":

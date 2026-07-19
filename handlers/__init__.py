@@ -6,4 +6,5 @@ from .subscriptions import subscriptions_router # noqa: F401
 from .group_management import group_managment_router # noqa: F401
 from .districts import districts_router # noqa: F401
 from .broadcast import broadcast_router # noqa: F401
+from .errors import router as errors_router # noqa: F401
 from .fallback import fallback_router # noqa: F401
