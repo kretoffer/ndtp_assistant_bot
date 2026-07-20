@@ -10,8 +10,8 @@ from keyboards import get_back_button
 from keyboards.cancel_keyboard import cancel_keyboard
 from parser import get_old_data
 from database import get_user_by_name, check_username, add_user
-from tools.search import search_persons, get_person_profile
-from tools.profile import format_person_name, format_distance_block
+from tools.search import search_persons
+from tools.profile import build_profile_text
 from tools.search_cache import store as _store_search, get as _get_search, update_page as _update_page
 
 
@@ -63,8 +63,10 @@ def _build_search_text(query: str, total: int, chunk: list[dict], page: int, shi
         for r in distance_results:
             p = r["person"]
             line = _format_person_line(p)
-            school = html.escape(p.get("school") or "")
-            parts.append(f"  • {line} — <i>{school}</i>")
+            direction = html.escape(p.get("direction", ""))
+            project = html.escape(p.get("project", ""))
+            period = html.escape(p.get("study_period") or "")
+            parts.append(f"  • {line} — <i>{direction}, {project} — {period}</i>")
         parts.append("")
 
     pages = (total + PAGE_SIZE - 1) // PAGE_SIZE
@@ -232,43 +234,9 @@ async def profile_handler(callback: CallbackQuery):
     surname = person.get("surname") or "?"
     name = person.get("name") or "?"
 
-    profile = get_person_profile(surname, name)
-    if not profile:
-        await callback.message.answer("Не удалось загрузить профиль.")
-        await callback.answer()
-        return
-
-    name_line = format_person_name(
-        surname, name, profile.get("patronymic", ""),
-        user=profile.get("user"),
-    )
-    lines = [name_line]
-
-    if profile.get("education"):
-        lines.append(f"🏫 {html.escape(profile['education'])}")
-    lines.append("")
-
-    shifts = profile.get("shifts", {})
     shift_names = [s["name"] for s in get_old_data()]
-
-    for shift_name in shifts:
-        shift_data = shifts[shift_name]
-        dop = shift_data.get("dopusheni", [])
-        spis = shift_data.get("spiski", [])
-        lines.append(f"📌 <b>{html.escape(shift_name)}</b>")
-        if dop:
-            lines.append(f"  📋 Допущен: {', '.join(html.escape(r) for r in dop)}")
-        if spis:
-            lines.append(f"  👀 Прошёл: {', '.join(html.escape(r) for r in spis)}")
-
-    if profile.get("distance"):
-        lines.append("")
-        lines.append(format_distance_block(profile["distance"]))
-
-    lines.append("")
-    lines.append(f"<i>Поиск проходил по спискам: {', '.join(html.escape(s) for s in shift_names)}</i>")
-
-    text = "\n".join(lines)
+    text = build_profile_text(surname, name)
+    text += f"\n\n<i>Поиск проходил по спискам: {', '.join(html.escape(s) for s in shift_names)}</i>"
     back_page = entry.get("current_page", 0)
     markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 К результатам", callback_data=f"search_page:{back_page}")]])
     await callback.message.edit_text(text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup) # pyright: ignore[reportAttributeAccessIssue]

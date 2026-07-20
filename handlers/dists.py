@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKe
 from keyboards import get_back_button
 from database import check_username, add_user
 from parser.distance_parser import get_distance_students
-from tools.profile import format_person_name, format_distance_block
+from tools.profile import build_profile_text
 
 
 dists_router = Router()
@@ -59,8 +59,8 @@ def _build_dir_text(direction: str, students: list[dict], page: int) -> str:
         fio = " ".join(filter(None, (s["surname"], s["name"], s["patronymic"])))
         lines.append(f"  • {html.escape(fio)}")
         if s.get("project"):
-            lines.append(f"    🔬 {html.escape(s['project'][:60])}")
-        lines.append(f"    🏫 {html.escape(s['school'][:50])}")
+            lines.append(f"    🔬 {html.escape(s['project'])}")
+        lines.append(f"    📅 {html.escape(s.get('study_period', ''))}")
         lines.append("")
     lines.append(f"Стр. {page + 1}/{pages}")
     return "\n".join(lines)
@@ -156,12 +156,7 @@ async def dists_person_handler(callback: CallbackQuery):
     s = students[offset]
     page = offset // PAGE_SIZE
 
-    name_line = format_person_name(
-        s.get("surname", ""), s.get("name", ""), s.get("patronymic", ""),
-    )
-    lines = [name_line, "", format_distance_block([s])]
-
-    text = "\n".join(lines)
+    text = build_profile_text(s.get("surname", ""), s.get("name", ""), distance_entries=[s])
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔙 К списку", callback_data=f"dists_dir:{dir_idx}:{page}")],
     ])

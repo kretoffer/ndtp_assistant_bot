@@ -36,22 +36,13 @@ def _split_full_name(full_name: str) -> tuple[str, str, str]:
 
 
 def _normalize_name(name: str) -> str:
-    name = name.strip().lstrip("«").rstrip("»").strip()
-    if name.endswith(")"):
-        name = name.rstrip(")")
+    name = name.strip().strip().replace("(", " ").replace(")", " ")
     name = name.replace("ё", "е").replace("Ё", "Е")
     name = re.sub(r"(?<=[а-я])-(?=[а-я])", "", name)
     name = re.sub(r"\s+", " ", name).strip()
     name = name[0].upper() + name[1:] if name else name
     name = name.replace(". автомобилестроение", ". Автомобилестроение")
     return name
-
-
-def _extract_project(rest: str) -> str:
-    rest = rest.strip()
-    if rest.startswith("(") and rest.endswith(")"):
-        rest = rest[1:-1]
-    return rest
 
 
 def _parse_direction_field(raw: str) -> tuple[str, str]:
@@ -65,13 +56,10 @@ def _parse_direction_field(raw: str) -> tuple[str, str]:
         idx = candidate.find("(«")
         if idx != -1:
             direction = _normalize_name(candidate[:idx])
-            rest = candidate[idx:]
-            project_match = re.search(r"«([^»]*)»?\)?", rest)
-            project = _normalize_name(project_match.group(1)) if project_match else ""
+            project = candidate[idx:]
         else:
             direction = _normalize_name(candidate)
-            rest = raw[first_close + 1:].strip()
-            project = _normalize_name(_extract_project(rest)) if rest else ""
+            project = raw[first_close + 1:].strip()
         if project == direction:
             project = ""
         return direction, project
@@ -139,7 +127,7 @@ async def parse_distance_docx(url: str) -> list[dict[str, Any]]:
             result.append({
                 "number": number,
                 "direction": direction,
-                "project": project,
+                "project": project.replace(")(", ", ").replace(") (", ", ").replace("(", " ").replace(")", " "),
                 "full_name": full_name,
                 "surname": surname,
                 "name": name,
