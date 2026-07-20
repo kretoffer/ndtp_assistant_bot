@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKe
 from keyboards import get_back_button
 from database import check_username, add_user
 from parser.distance_parser import get_distance_students
-from tools.profile import format_person_name
+from tools.profile import format_person_name, format_distance_block
 
 
 dists_router = Router()
@@ -159,14 +159,7 @@ async def dists_person_handler(callback: CallbackQuery):
     name_line = format_person_name(
         s.get("surname", ""), s.get("name", ""), s.get("patronymic", ""),
     )
-    lines = [name_line]
-    lines.append(f"📌 Направление: {html.escape(direction)}")
-    if s.get("project"):
-        lines.append(f"🔬 Проект: {html.escape(s['project'])}")
-    lines.append(f"🏫 {html.escape(s['school'])}")
-    lines.append(f"🌍 {html.escape(s['region'])}")
-    if s.get("study_period"):
-        lines.append(f"📅 {html.escape(s['study_period'])}")
+    lines = [name_line, "", format_distance_block([s])]
 
     text = "\n".join(lines)
     markup = InlineKeyboardMarkup(inline_keyboard=[

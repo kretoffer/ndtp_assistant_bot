@@ -11,7 +11,7 @@ from keyboards.cancel_keyboard import cancel_keyboard
 from parser import get_old_data
 from database import get_user_by_name, check_username, add_user
 from tools.search import search_persons, get_person_profile
-from tools.profile import format_person_name
+from tools.profile import format_person_name, format_distance_block
 from tools.search_cache import store as _store_search, get as _get_search, update_page as _update_page
 
 
@@ -55,6 +55,16 @@ def _build_search_text(query: str, total: int, chunk: list[dict], page: int, shi
             line = _format_person_line(p)
             education = html.escape(p.get("education") or "")
             parts.append(f"  • {line} — <i>{html.escape(r['region'])}, {education}</i>")
+        parts.append("")
+
+    distance_results = [r for r in chunk if r["list_type"] == "distance"]
+    if distance_results:
+        parts.append(f"📡 <b>Дистанционное обучение ({len(distance_results)}):</b>")
+        for r in distance_results:
+            p = r["person"]
+            line = _format_person_line(p)
+            school = html.escape(p.get("school") or "")
+            parts.append(f"  • {line} — <i>{school}</i>")
         parts.append("")
 
     pages = (total + PAGE_SIZE - 1) // PAGE_SIZE
@@ -250,6 +260,10 @@ async def profile_handler(callback: CallbackQuery):
             lines.append(f"  📋 Допущен: {', '.join(html.escape(r) for r in dop)}")
         if spis:
             lines.append(f"  👀 Прошёл: {', '.join(html.escape(r) for r in spis)}")
+
+    if profile.get("distance"):
+        lines.append("")
+        lines.append(format_distance_block(profile["distance"]))
 
     lines.append("")
     lines.append(f"<i>Поиск проходил по спискам: {', '.join(html.escape(s) for s in shift_names)}</i>")

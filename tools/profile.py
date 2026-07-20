@@ -28,3 +28,16 @@ def format_person_name(
     if icon:
         name_part = f"{icon} {name_part}"
     return name_part
+
+
+def format_distance_block(entries: list[dict]) -> str:
+    lines = ["📡 <b>Дистанционная форма обучения</b>"]
+    for i, e in enumerate(entries):
+        if i > 0:
+            lines.append("")
+        lines.append(f"  📌 Направление: {html.escape(e['direction'])}")
+        if e.get("project"):
+            lines.append(f"  🔬 Проект: {html.escape(e['project'])}")
+        if e.get("study_period"):
+            lines.append(f"  📅 {html.escape(e['study_period'])}")
+    return "\n".join(lines)
