@@ -19,10 +19,12 @@ from handlers import (
     errors_router,
     fallback_router,
     voice_router,
+    dists_router,
 )
 
 from parser import init_parser, parse_and_compare
 from parser.districts_info_parser import parse_and_compare_districts
+from parser.distance_parser import init_distance_parser, parse_and_save_distance
 from tools.search_cache import setup as setup_search_cache, cleanup_expired
 from tools.feed_reminder import check_and_send_reminders
 from logger import setup_logging
@@ -41,6 +43,8 @@ async def on_startup(dispatcher: Dispatcher):
         dispatcher["config"].spiski_data_path,
         dispatcher["config"].districts_info_path
     )
+    init_distance_parser(dispatcher["config"].dists_data_path)
+    asyncio.ensure_future(parse_and_save_distance())
 
 
 async def on_shutdown(dispatcher: Dispatcher):
@@ -68,6 +72,7 @@ async def main():
     dp.include_router(group_settings_router)
     dp.include_router(districts_router)
     dp.include_router(broadcast_router)
+    dp.include_router(dists_router)
     dp.include_router(errors_router)
     dp.include_router(voice_router)
     dp.include_router(fallback_router)
@@ -81,6 +86,9 @@ async def main():
     )
     scheduler.add_job(
         cleanup_expired, "interval", seconds=config.search_cache_cleanup_interval
+    )
+    scheduler.add_job(
+        parse_and_save_distance, "interval", seconds=config.distance_parsing_interval
     )
     scheduler.add_job(
         check_and_send_reminders, "cron", args=(bot,), hour=12

@@ -11,6 +11,7 @@ from keyboards.cancel_keyboard import cancel_keyboard
 from parser import get_old_data
 from database import get_user_by_name, check_username, add_user
 from tools.search import search_persons, get_person_profile
+from tools.profile import format_person_name
 from tools.search_cache import store as _store_search, get as _get_search, update_page as _update_page
 
 
@@ -227,15 +228,10 @@ async def profile_handler(callback: CallbackQuery):
         await callback.answer()
         return
 
-    full_name = " ".join(filter(None, (surname, name, profile.get("patronymic"))))
-    user_data = profile.get("user")
-    if user_data and (user_data.get("username") or user_data.get("id")):
-        if user_data["username"]:
-            name_line = f'👤 <a href="https://t.me/{html.escape(user_data["username"])}"><b>{html.escape(full_name)}</b></a>'
-        else:
-            name_line = f'👤 <a href="tg://user?id={html.escape(str(user_data["id"]))}"><b>{html.escape(full_name)}</b></a>'
-    else:
-        name_line = f"👤 <b>{html.escape(full_name)}</b>"
+    name_line = format_person_name(
+        surname, name, profile.get("patronymic", ""),
+        user=profile.get("user"),
+    )
     lines = [name_line]
 
     if profile.get("education"):

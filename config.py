@@ -35,8 +35,10 @@ class Config:
     dopusheni_data_path = "data/dopusheni_data.json"
     spiski_data_path = "data/spiski_data.json"
     districts_info_path = "data/districts_info.json"
+    dists_data_path = "data/dists_data.json"
     parsing_interval = 60
     districts_parsing_interval = 1800
+    distance_parsing_interval = 3600
     search_cache_ttl: int = 300
     search_cache_cleanup_interval: int = 60
     GROUP_SETTINGS = {

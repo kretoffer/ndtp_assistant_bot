@@ -10,3 +10,4 @@ from .broadcast import broadcast_router # noqa: F401
 from .errors import router as errors_router # noqa: F401
 from .fallback import fallback_router # noqa: F401
 from .voice import voice_router # noqa: F401
+from .dists import dists_router # noqa: F401
