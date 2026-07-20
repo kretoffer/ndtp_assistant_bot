@@ -115,6 +115,40 @@ async def notify_about_spiski(bot: Bot, spisok_info: dict):
                     logger.error(f"An unexpected error occurred while sending message to user {user_id}: {e}")
 
 
+async def notify_groups_about_new_spiski(bot: Bot, spisok_info: dict):
+    if not spisok_info["is_spiski"]:
+        return
+    from parser import get_spiski
+    shift_name = spisok_info["shift"]
+    group_filters = get_all_group_shift_filters()
+    matching_groups = [gid for gid, sname in group_filters.items() if sname == shift_name]
+    if not matching_groups:
+        return
+
+    spisok_data = get_spiski(shift_name)
+    if not spisok_data:
+        return
+
+    for group_id in matching_groups:
+        for district_name in sorted(spisok_data.keys()):
+            text = f'😸 <b>Прошедшие на образовательное направление "{district_name}"</b>":\n\n'
+            for person in spisok_data[district_name]:
+                line = " ".join((person["surname"], person["name"], person["patronymic"]))
+                if user := get_user_by_name(person["name"], person["surname"]):
+                    if user["username"]:
+                        line = f'<a href="https://t.me/{html.escape(user["username"])}">{html.escape(line)}</a>'
+                    elif user["id"]:
+                        line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
+                text += line + "\n"
+
+            try:
+                await bot.send_message(group_id, text, parse_mode='HTML', disable_web_page_preview=True)
+            except TelegramForbiddenError:
+                logger.warning(f"Group {group_id} has blocked the bot.")
+            except TelegramBadRequest as e:
+                logger.error(f"Failed to send message to group {group_id}: {e}")
+
+
 async def notify_all_users(bot: Bot, changes, new_spiski):
     users = set()
     if changes["removed_shifts"] or changes["new_shifts"]:
@@ -156,6 +190,7 @@ async def notify_all_users(bot: Bot, changes, new_spiski):
 
     for spisok in new_spiski:
         await notify_about_spiski(bot, spisok)
+        await notify_groups_about_new_spiski(bot, spisok)
 
     logger.info("Finished sending messages to all users.")
 

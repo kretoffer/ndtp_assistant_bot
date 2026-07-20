@@ -65,8 +65,9 @@ async def show_spiski(callback: CallbackQuery):
         keys = sorted(spiski.keys()) # pyright: ignore[reportOptionalMemberAccess]
         if len(data) == 2:
             text = f"📌 <b>{name}\nОбразовательные направления:</b>\n\n"
-            markup = get_regions_keyboard(shift_index, keys)
-            await callback.message.answer(text, parse_mode="HTML", reply_markup=markup)
+            regions_markup = get_regions_keyboard(shift_index, keys)
+            regions_markup.inline_keyboard.insert(-1, [InlineKeyboardButton(text="📋 Все списки", callback_data=f"spiski_all:{shift_index}")])
+            await callback.message.answer(text, parse_mode="HTML", reply_markup=regions_markup)
         elif len(data) == 3:
             district_index = int(data[2])
             text = f'😸 <b>Прошедшие на образовательное направление "{keys[district_index]}</b>":\n\n'
@@ -79,6 +80,32 @@ async def show_spiski(callback: CallbackQuery):
                         line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
                 line += "\n"
                 text += line
+            await callback.message.answer(text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=get_back_markup(f"shift-info:{shift_index}"))
+    await callback.answer()
+
+
+@schedule_router.callback_query(F.data.startswith("spiski_all:"))
+async def show_spiski_all(callback: CallbackQuery):
+    if callback.data and callback.message:
+        shift_index = int(callback.data.split(":")[1])
+        name = get_old_data()[shift_index]["name"]
+        spiski_data = get_spiski(name)
+        if not spiski_data:
+            await callback.answer()
+            return
+        keys = sorted(spiski_data.keys())
+
+        for district_key in keys:
+            text = f'😸 <b>Прошедшие на образовательное направление "{district_key}</b>":\n\n'
+            for person in spiski_data[district_key]:
+                line = " ".join((person["surname"], person["name"], person["patronymic"]))
+                if user := get_user_by_name(person["name"], person["surname"]):
+                    if user["username"]:
+                        line = f'<a href="https://t.me/{html.escape(user["username"])}">{html.escape(line)}</a>'
+                    elif user["id"]:
+                        line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
+                text += line + "\n"
+
             await callback.message.answer(text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=get_back_markup(f"shift-info:{shift_index}"))
     await callback.answer()
 
