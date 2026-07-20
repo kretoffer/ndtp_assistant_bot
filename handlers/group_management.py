@@ -1,5 +1,6 @@
 import logging
 from aiogram import Bot, F, Router
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import Message, ChatMemberUpdated
 
 from database import add_group, remove_group
@@ -54,14 +55,24 @@ async def on_bot_admin_change(event: ChatMemberUpdated, bot: Bot, config: Config
             "Пожалуйста, верните мне права администратора "
             "с включённым правом «Читать сообщения»."
         )
-        await bot.send_message(event.chat.id, text, parse_mode="HTML")
+        try:
+            await bot.send_message(event.chat.id, text, parse_mode="HTML")
+        except TelegramForbiddenError:
+            logger.warning(f"Bot was kicked from group {event.chat.id}")
+        except TelegramBadRequest as e:
+            logger.error(f"Failed to send admin lost message to group {event.chat.id}: {e}")
 
     elif old != "administrator" and new == "administrator":
         text = (
             "✅ <b>Я получил права администратора!</b>\n\n"
             "Теперь вы можете настроить функции через /group_settings"
         )
-        await bot.send_message(event.chat.id, text, parse_mode="HTML")
+        try:
+            await bot.send_message(event.chat.id, text, parse_mode="HTML")
+        except TelegramForbiddenError:
+            logger.warning(f"Bot was kicked from group {event.chat.id}")
+        except TelegramBadRequest as e:
+            logger.error(f"Failed to send admin granted message to group {event.chat.id}: {e}")
 
 
 @group_managment_router.message(F.left_chat_member)
