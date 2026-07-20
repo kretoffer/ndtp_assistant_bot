@@ -4,10 +4,11 @@ from aiogram.types import Message, CallbackQuery, InaccessibleMessage
 from aiogram.filters import Command
 
 from config import Config
-from database import toggle_group_setting
-from keyboards.group_settings_keyboard import get_group_settings_keyboard
+from database import toggle_group_setting, set_group_shift
+from keyboards.group_settings_keyboard import get_group_settings_keyboard, get_shift_selection_keyboard
 
 from tools.group_tools import is_admin, is_bot_admin
+from parser import get_old_data
 
 logger = logging.getLogger(__name__)
 
@@ -86,3 +87,118 @@ async def toggle_group_setting_handler(callback_query: CallbackQuery, bot: Bot, 
     except Exception as e:
         logger.error(f"Error toggling group setting: {e}")
         await callback_query.answer("Произошла ошибка.", show_alert=True)
+
+
+@group_settings_router.callback_query(F.data == "select_shift")
+async def select_shift_handler(callback_query: CallbackQuery, config: Config):
+    if not callback_query.message or not callback_query.from_user:
+        return
+
+    chat_id = callback_query.message.chat.id
+
+    shifts = get_old_data()
+    from database import get_group_settings
+    row = get_group_settings(chat_id)
+    current_shift = row["selected_shift"] if row else None
+
+    keyboard = get_shift_selection_keyboard(shifts, current_shift)
+    text = "🎯 <b>Выберите смену для фильтрации уведомлений</b>"
+
+    if isinstance(callback_query.message, InaccessibleMessage):
+        await callback_query.answer()
+        return
+    await callback_query.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback_query.answer()
+
+
+@group_settings_router.callback_query(F.data == "back_to_group_settings")
+async def back_to_group_settings_handler(callback_query: CallbackQuery, bot: Bot, config: Config):
+    if not callback_query.message or not callback_query.from_user:
+        return
+
+    chat_id = callback_query.message.chat.id
+    admin_status = "✅ Администратор" if await is_bot_admin(bot, chat_id) else "❌ Не администратор"
+    keyboard = get_group_settings_keyboard(chat_id, config.GROUP_SETTINGS)
+    text = (
+        f"⚙️ <b>Настройки группы</b>\n\n"
+        f"🤖 Статус бота: {admin_status}\n"
+    )
+
+    if isinstance(callback_query.message, InaccessibleMessage):
+        await callback_query.answer()
+        return
+    await callback_query.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback_query.answer()
+
+
+@group_settings_router.callback_query(F.data == "set_shift:all")
+async def set_shift_all_handler(callback_query: CallbackQuery, bot: Bot, config: Config):
+    if not callback_query.message or not callback_query.from_user:
+        return
+
+    chat_id = callback_query.message.chat.id
+    user_id = callback_query.from_user.id
+
+    if not await is_admin(bot, chat_id, user_id):
+        await callback_query.answer("❌ Только администраторы могут менять настройки.", show_alert=True)
+        return
+
+    set_group_shift(chat_id, None)
+
+    admin_status = "✅ Администратор" if await is_bot_admin(bot, chat_id) else "❌ Не администратор"
+    keyboard = get_group_settings_keyboard(chat_id, config.GROUP_SETTINGS)
+    text = (
+        f"⚙️ <b>Настройки группы</b>\n\n"
+        f"🤖 Статус бота: {admin_status}\n"
+    )
+
+    if isinstance(callback_query.message, InaccessibleMessage):
+        await callback_query.answer()
+        return
+    await callback_query.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback_query.answer("Уведомления будут приходить по всем сменам.")
+
+
+@group_settings_router.callback_query(F.data.startswith("set_shift_idx:"))
+async def set_shift_idx_handler(callback_query: CallbackQuery, bot: Bot, config: Config):
+    if not callback_query.message or not callback_query.from_user:
+        return
+
+    chat_id = callback_query.message.chat.id
+    user_id = callback_query.from_user.id
+
+    if not await is_admin(bot, chat_id, user_id):
+        await callback_query.answer("❌ Только администраторы могут менять настройки.", show_alert=True)
+        return
+
+    data = callback_query.data
+    if not data:
+        await callback_query.answer()
+        return
+
+    try:
+        idx = int(data.split(":", 1)[1])
+    except (ValueError, IndexError):
+        await callback_query.answer("Ошибка.", show_alert=True)
+        return
+
+    shifts = get_old_data()
+    if idx < 0 or idx >= len(shifts):
+        await callback_query.answer("Смена не найдена.", show_alert=True)
+        return
+
+    shift_name = shifts[idx]["name"]
+    set_group_shift(chat_id, shift_name)
+
+    admin_status = "✅ Администратор" if await is_bot_admin(bot, chat_id) else "❌ Не администратор"
+    keyboard = get_group_settings_keyboard(chat_id, config.GROUP_SETTINGS)
+    text = (
+        f"⚙️ <b>Настройки группы</b>\n\n"
+        f"🤖 Статус бота: {admin_status}\n"
+    )
+
+    if isinstance(callback_query.message, InaccessibleMessage):
+        await callback_query.answer()
+        return
+    await callback_query.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback_query.answer(f"Уведомления только по смене: {shift_name}")

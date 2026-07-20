@@ -8,7 +8,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 
 from parser import get_old_data
-from database import get_subscribers_by_topic
+from database import get_subscribers_by_topic, get_all_group_shift_filters
 
 logger = logging.getLogger(__name__)
 
@@ -45,20 +45,23 @@ async def check_and_send_reminders(bot: Bot):
                 f"📅 Сегодня, {start.strftime('%d.%m')}, "
                 f"открывается приём заявок на смену «{html.escape(name)}»"
             )
-            await _send(bot, text)
+            await _send(bot, text, shift_name=name)
 
         if today == end - timedelta(days=1):
             text = (
                 f"⚠️ Завтра, {end.strftime('%d.%m')}, "
                 f"последний день подачи заявок на смену «{html.escape(name)}»"
             )
-            await _send(bot, text)
+            await _send(bot, text, shift_name=name)
 
 
-async def _send(bot: Bot, text: str):
+async def _send(bot: Bot, text: str, shift_name: str | None = None):
     subscribers = get_subscribers_by_topic("application_reminders")
+    group_filters = get_all_group_shift_filters() if shift_name else {}
     for user in subscribers:
         user_id = user["id"]
+        if user_id in group_filters and group_filters[user_id] != shift_name:
+            continue
         try:
             await bot.send_message(user_id, text, parse_mode="HTML")
         except TelegramForbiddenError:

@@ -3,7 +3,7 @@ import html
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
-from database import get_subscribers_by_topic, get_all_users, get_user_by_name, get_user_by_surname
+from database import get_subscribers_by_topic, get_all_users, get_user_by_name, get_user_by_surname, get_all_group_shift_filters
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +67,29 @@ def get_users_for_docs(docs: dict) -> set:
     return users
 
 
+def filter_changes_for_shift(changes: dict, shift_name: str) -> dict | None:
+    result = {"new_shifts": [], "removed_shifts": [], "modified_shifts": []}
+
+    for s in changes.get("new_shifts", []):
+        if s["name"] == shift_name:
+            result["new_shifts"].append(s)
+            break
+
+    for s in changes.get("removed_shifts", []):
+        if s["name"] == shift_name:
+            result["removed_shifts"].append(s)
+            break
+
+    for s in changes.get("modified_shifts", []):
+        if s["name"] == shift_name:
+            result["modified_shifts"].append(s)
+            break
+
+    if any(result.values()):
+        return result
+    return None
+
+
 async def notify_about_spiski(bot: Bot, spisok_info: dict):
     from parser import parse_new_spisok, get_districts
     spisok = await parse_new_spisok(spisok_info["link"], spisok_info["shift"], spisok_info["is_spiski"])
@@ -104,13 +127,23 @@ async def notify_all_users(bot: Bot, changes, new_spiski):
         if "added_docs" in modified_shift["changes"]:
             users.update(get_users_for_docs(modified_shift["changes"]["added_docs"]))
     text = generate_message_text(changes)
+    group_filters = get_all_group_shift_filters()
     logger.info(f"Starting to send message to {len(users)} users.")
 
     for user in users:
         user_id = user["id"]
+
+        if user_id in group_filters:
+            filtered = filter_changes_for_shift(changes, group_filters[user_id])
+            if filtered is None:
+                continue
+            msg_text = generate_message_text(filtered)
+        else:
+            msg_text = text
+
         try:
             await bot.send_message(
-                user_id, text, parse_mode="HTML", disable_web_page_preview=True
+                user_id, msg_text, parse_mode="HTML", disable_web_page_preview=True
             )
         except TelegramForbiddenError:
             logger.warning(f"User {user_id} has blocked the bot. Cannot send message.")
