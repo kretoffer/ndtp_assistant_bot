@@ -36,12 +36,12 @@ async def show_districts(callback: CallbackQuery):
         text = f"📌 <b>{name}\nОбразовательные направления:</b>\n\n"
         programs = get_districts(name)
         districts_info = get_districts_info()
-        districts_names = list(districts_info.keys()) # pyright: ignore[reportOptionalMemberAccess]
+        districts_names = sorted(districts_info.keys()) # pyright: ignore[reportOptionalMemberAccess]
         buttons = []
         if programs:
             for district, program in programs.items():
                 if district in districts_names:
-                    programs_names = list(districts_info[district]["programs"].keys()) # pyright: ignore[reportOptionalSubscript]
+                    programs_names = sorted(districts_info[district]["programs"].keys()) # pyright: ignore[reportOptionalSubscript]
                     if program in programs_names:
                         buttons.append(InlineKeyboardButton(text=program, callback_data=f"direction_info:{districts_names.index(district)}:{programs_names.index(program)}:districts:{shift_index}"))
                 if district == "Информационные и компьютерные технологии":
