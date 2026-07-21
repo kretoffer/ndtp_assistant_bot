@@ -90,7 +90,8 @@ async def surname_entered(message: Message, state: FSMContext, config: Config):
 
 async def reg_user_name(message: Message, name, surname, config: Config, state: FSMContext):
     try:
-        update_user_name(message.from_user.id, name, surname) # pyright: ignore[reportOptionalMemberAccess]
+        if message.from_user:
+            update_user_name(message.from_user.id, name, surname)
         await message.answer(f"{config.messages.registration_successful}, {surname} {name}\n\nЧтобы поменять имя /edit_name")
     except Exception as e:
         await message.answer(config.messages.error_occured)

@@ -22,11 +22,11 @@ _districts_data_path = None
 _dopusheni_data_path = None
 _spiski_data_path = None
 _districts_info_path = None
-old_data = []
-districts = {}
-dopusheni = {}
-spiski = {}
-districts_info = {}
+old_data: list = []
+districts: dict = {}
+dopusheni: dict = {}
+spiski: dict = {}
+districts_info: dict = {}
 
 DOC_NAME = "Положение об образовательной смене"
 SPISKI_DOPUSCHENNYH_START_WITH = "Списочный состав участников, допущенных ко второму этапу"
@@ -126,7 +126,9 @@ def save_districts_info(info: dict | None = None):
 
 async def parse() -> list:
     data = await fetch("https://ndtp.by/schedule/")
-    soup = BeautifulSoup(data, "lxml") # type: ignore
+    if not data:
+        return []
+    soup = BeautifulSoup(data, "lxml")
 
     schedule = []
 
@@ -339,7 +341,7 @@ async def parse_all_districts() -> dict:
     return _districts
 
 
-def get_user(fio, school_and_class, is_spiski = False):
+def get_user(fio, school_and_class, is_spiski = False) -> dict | None:
     try:
         fio_parts = fio.split()
 
@@ -407,17 +409,19 @@ async def parse_spisok(url: str, is_spisok = False) -> dict:
                     region = row[0]
                     if region.startswith("Образовательное направление"):
                         region = region .split("«")[1].rsplit("»")[0].replace("\n", " ")
-                elif len(row) == 3 and (row[0].startswith("№") or row[1] == "ФИО" or row[2] == "Учреждение образования, класс"): # pyright: ignore[reportOptionalMemberAccess]
+                elif len(row) == 3 and (row[0] is not None and row[0].startswith("№") or row[1] == "ФИО" or row[2] is not None and row[2] == "Учреждение образования, класс"):
                     continue
                 elif len(row) >= 3 and not row[0] and not row[1] and peoples:
                     valid_row = [el for el in row if el]
                     if len(valid_row) == 2:
                         people = peoples[-1]
-                        fio = " ".join((people["surname"], people["name"], people["patronymic"], valid_row[0])) # pyright: ignore[reportOptionalSubscript]
-                        school = people["education"] # pyright: ignore[reportOptionalSubscript]
+                        if people is None:
+                            continue
+                        fio = " ".join((people["surname"], people["name"], people["patronymic"], valid_row[0]))
+                        school = people["education"]
                         school = school if school else ""
-                        if people["class"]: # pyright: ignore[reportOptionalSubscript]
-                            school += f",\n{people['class']}" # pyright: ignore[reportOptionalSubscript]
+                        if people["class"]:
+                            school += f",\n{people['class']}"
                         for number in range(9, 12):
                             if valid_row[1].startswith(str(number)) and valid_row[1].endswith("класс"):
                                 school+=",\n"
@@ -450,10 +454,12 @@ async def parse_spisok(url: str, is_spisok = False) -> dict:
                         peoples.append(get_user(valid_row[0], valid_row[1], is_spisok))
                     elif len(valid_row) == 1 and not row[0] and peoples:
                         people = peoples[-1]
-                        fio = " ".join((people["surname"], people["name"], people["patronymic"])) # pyright: ignore[reportOptionalSubscript]
-                        school = people["education"] # pyright: ignore[reportOptionalSubscript]
-                        if people["class"]: # pyright: ignore[reportOptionalSubscript]
-                            school += f",\n{people['class']}" # pyright: ignore[reportOptionalSubscript]
+                        if people is None:
+                            continue
+                        fio = " ".join((people["surname"], people["name"], people["patronymic"]))
+                        school = people["education"]
+                        if people["class"]:
+                            school += f",\n{people['class']}"
                         for number in range(9, 12):
                             if valid_row[0].startswith(str(number)) and valid_row[0].endswith("класс"):
                                 school+=",\n"
@@ -495,25 +501,29 @@ def get_old_data() -> list:
     return old_data
 
 
-def get_districts(name: str | None = None):
+def get_districts(name: str | None = None) -> dict:
     if name:
-        return districts.get(name)
+        result = districts.get(name)
+        return result if result is not None else {}
     return districts
 
 
-def get_dopusheni(name: str | None = None):
+def get_dopusheni(name: str | None = None) -> dict:
     if name:
-        return dopusheni.get(name)
+        result = dopusheni.get(name)
+        return result if result is not None else {}
     return dopusheni
 
 
-def get_spiski(name: str | None = None):
+def get_spiski(name: str | None = None) -> dict:
     if name:
-        return spiski.get(name)
+        result = spiski.get(name)
+        return result if result is not None else {}
     return spiski
 
 
-def get_districts_info(name: str | None = None):
+def get_districts_info(name: str | None = None) -> dict:
     if name:
-        return districts_info.get(name) # pyright: ignore[reportOptionalMemberAccess]
+        result = districts_info.get(name)
+        return result if result is not None else {}
     return districts_info

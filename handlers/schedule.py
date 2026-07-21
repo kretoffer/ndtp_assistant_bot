@@ -36,12 +36,12 @@ async def show_districts(callback: CallbackQuery):
         text = f"📌 <b>{name}\nОбразовательные направления:</b>\n\n"
         programs = get_districts(name)
         districts_info = get_districts_info()
-        districts_names = sorted(districts_info.keys()) # pyright: ignore[reportOptionalMemberAccess]
+        districts_names = sorted(districts_info.keys())
         buttons = []
         if programs:
             for district, program in programs.items():
                 if district in districts_names:
-                    programs_names = sorted(districts_info[district]["programs"].keys()) # pyright: ignore[reportOptionalSubscript]
+                    programs_names = sorted(districts_info[district]["programs"].keys())
                     if program in programs_names:
                         buttons.append(InlineKeyboardButton(text=program, callback_data=f"direction_info:{districts_names.index(district)}:{programs_names.index(program)}:districts:{shift_index}"))
                 if district == "Информационные и компьютерные технологии":
@@ -62,7 +62,7 @@ async def show_spiski(callback: CallbackQuery):
         shift_index = int(data[1])
         name = get_old_data()[shift_index]["name"]
         spiski = get_spiski(name)
-        keys = sorted(spiski.keys()) # pyright: ignore[reportOptionalMemberAccess]
+        keys = sorted(spiski.keys())
         if len(data) == 2:
             text = f"📌 <b>{name}\nОбразовательные направления:</b>\n\n"
             regions_markup = get_regions_keyboard(shift_index, keys)
@@ -71,7 +71,7 @@ async def show_spiski(callback: CallbackQuery):
         elif len(data) == 3:
             district_index = int(data[2])
             text = f'😸 <b>Прошедшие на образовательное направление "{keys[district_index]}</b>":\n\n'
-            for person in spiski[keys[district_index]]: # pyright: ignore[reportOptionalSubscript]
+            for person in spiski[keys[district_index]]:
                 line = " ".join((person["surname"], person["name"], person["patronymic"]))
                 if user := get_user_by_name(person["name"], person["surname"]):
                     if user["username"]:

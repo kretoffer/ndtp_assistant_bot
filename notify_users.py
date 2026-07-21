@@ -95,18 +95,22 @@ async def notify_about_spiski(bot: Bot, spisok_info: dict):
     spisok = await parse_new_spisok(spisok_info["link"], spisok_info["shift"], spisok_info["is_spiski"])
     for district_name, district in spisok.items():
         for person in district:
-            if user := get_user_by_name(person["name"], person["surname"]):
+            user = get_user_by_name(person["name"], person["surname"])
+            message = None
+            if user:
                 message = f"👋 Хей, {person['surname']} {person["name"]}, нашел тебя в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
                 if spisok_info['is_spiski']:
-                    district_dir = get_districts(spisok_info["shift"]).get(district_name) # pyright: ignore[reportOptionalMemberAccess]
+                    district_dir = get_districts(spisok_info["shift"]).get(district_name)
                     if district_dir and district_dir != district_name:
                         message += f" ({district_dir})"
-            elif user := get_user_by_surname(person["surname"]):
-                message = f"👋 Хей, нашел фамилию {person['surname']} в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
-            if user:
-                user_id = user["id"] # pyright: ignore[reportPossiblyUnboundVariable]
+            else:
+                user = get_user_by_surname(person["surname"])
+                if user:
+                    message = f"👋 Хей, нашел фамилию {person['surname']} в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
+            if user and message:
+                user_id = user["id"]
                 try:
-                    await bot.send_message(user_id, message, parse_mode="HTML") # pyright: ignore[reportPossiblyUnboundVariable]
+                    await bot.send_message(user_id, message, parse_mode="HTML")
                 except TelegramForbiddenError:
                     logger.warning(f"User {user_id} has blocked the bot. Cannot send message.")
                 except TelegramBadRequest as e:

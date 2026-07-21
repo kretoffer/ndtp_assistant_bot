@@ -18,27 +18,27 @@ districts_router = Router()
 @districts_router.message(Command("districts"))
 @districts_router.callback_query(lambda c: c.data == "districts")
 async def districts(update: Union[Message, CallbackQuery]):
-    from_user, answer = get_from_user_and_answer_from_update(update) # pyright: ignore[reportAssignmentType]
+    from_user, _ = get_from_user_and_answer_from_update(update)
     if not from_user:
         return
-    if isinstance(update, CallbackQuery):
-        async def answer(text: str, reply_markup):
-            if not update.message:
-                return
-            await update.message.answer(text=text, reply_markup=reply_markup)
-            if not isinstance(update.message, InaccessibleMessage):
-                await update.message.delete()
 
     check_username(from_user.id, from_user.username)
     text = "👀 Выберите направление о котором хотите узнать"
 
-    directions = get_districts_info().keys() # pyright: ignore[reportOptionalMemberAccess]
-    directions = sorted(directions)
+    directions = sorted(get_districts_info().keys())
+
     buttons = [InlineKeyboardButton(text=name, callback_data=f"direction_info:{id}") for id, name in enumerate(directions)]
     buttons.append(InlineKeyboardButton(text="🔙 Назад", callback_data="home"))
     markup = InlineKeyboardMarkup(inline_keyboard=[[button] for button in buttons])
 
-    await answer(text, reply_markup=markup)
+    if isinstance(update, CallbackQuery):
+        if not update.message:
+            return
+        await update.message.answer(text=text, reply_markup=markup)
+        if not isinstance(update.message, InaccessibleMessage):
+            await update.message.delete()
+    else:
+        await update.answer(text=text, reply_markup=markup)
 
 
 @districts_router.callback_query(F.data.startswith("direction_info:"))
@@ -50,10 +50,10 @@ async def direction_info(callback: CallbackQuery):
         direction_index = int(args[1])
 
         directions_info = get_districts_info()
-        directions = sorted(directions_info.keys()) # type: ignore
+        directions = sorted(directions_info.keys())
 
         direction_name = directions[direction_index]
-        direction = directions_info[direction_name] # pyright: ignore[reportOptionalSubscript]
+        direction = directions_info[direction_name]
 
         programs = direction["programs"]
         programs_names = sorted(programs.keys())
