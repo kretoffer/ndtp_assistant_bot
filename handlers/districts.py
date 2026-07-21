@@ -2,11 +2,12 @@ import os
 import random
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, InaccessibleMessage
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 
 from typing import Union
 
 from tools import get_from_user_and_answer_from_update
+from tools.safe_delete import safe_delete_message
 
 from parser import get_districts_info
 from database import check_username
@@ -35,8 +36,7 @@ async def districts(update: Union[Message, CallbackQuery]):
         if not update.message:
             return
         await update.message.answer(text=text, reply_markup=markup)
-        if not isinstance(update.message, InaccessibleMessage):
-            await update.message.delete()
+        await safe_delete_message(update.message)
     else:
         await update.answer(text=text, reply_markup=markup)
 
@@ -70,8 +70,7 @@ async def direction_info(callback: CallbackQuery):
             if direction["info"]:
                 text += f"\n\n{direction['info']}"
 
-            if callback.message and not isinstance(callback.message, InaccessibleMessage):
-                await callback.message.delete()
+            await safe_delete_message(callback.message)
             await answer_with_random_img(callback.message.answer, callback.message.answer_photo, direction_name, text, markup)
 
         elif len(args) >= 3:
@@ -84,8 +83,7 @@ async def direction_info(callback: CallbackQuery):
             markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data=back)]])
 
             await callback.message.answer(text, parse_mode="HTML", reply_markup=markup)
-            if callback.message and not isinstance(callback.message, InaccessibleMessage):
-                await callback.message.delete()
+            await safe_delete_message(callback.message)
 
     await callback.answer()
 
