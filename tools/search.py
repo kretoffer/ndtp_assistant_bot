@@ -2,9 +2,10 @@ from typing import Literal
 
 from database import get_user_by_name
 from parser import get_dopusheni, get_spiski
+from parser.distance_parser import get_distance_students
 
 
-ListType = Literal["all", "dopusheni", "spiski"]
+ListType = Literal["all", "dopusheni", "spiski", "distance"]
 
 
 def search_persons(
@@ -56,6 +57,16 @@ def search_persons(
             else:
                 _search_in(data, "spiski", shift_name)
 
+    if lists in ("all", "distance"):
+        for s in get_distance_students():
+            if (query in (s.get("surname") or "").lower()
+                or query in (s.get("name") or "").lower()
+                or query in (s.get("patronymic") or "").lower()):
+                results.append({
+                    "list_type": "distance",
+                    "person": s,
+                })
+
     total = len(results)
     if limit is not None:
         results = results[offset:offset + limit]
@@ -87,4 +98,10 @@ def get_person_profile(surname: str, name: str) -> dict | None:
                         if person.get("education"):
                             profile["education"] = person["education"]
 
-    return profile if profile["shifts"] else None
+    distance = [s for s in get_distance_students()
+                if s["surname"] == surname and s["name"] == name]
+    if distance:
+        profile["distance"] = distance
+        profile["patronymic"] = profile.get("patronymic") or distance[0].get("patronymic", "")
+
+    return profile if profile["shifts"] or profile.get("distance") else None

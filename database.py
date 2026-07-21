@@ -23,7 +23,7 @@ def close_db_connection():
         _connection = None
 
 
-def init_db(topic_names: dict | None = None):
+def init_db(topic_names: dict | None = None, group_settings: dict | None = None):
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -63,6 +63,21 @@ def init_db(topic_names: dict | None = None):
                 cursor.execute(
                     f"ALTER TABLE subscriptions ADD COLUMN {topic} INTEGER NOT NULL DEFAULT 1"
                 )
+
+    cursor.execute("PRAGMA table_info(groups)")
+    existing_group_columns = {row[1] for row in cursor.fetchall()}
+
+    if group_settings:
+        for setting in group_settings:
+            if setting not in existing_group_columns:
+                logger.info(f"Adding column '{setting}' to groups table")
+                cursor.execute(
+                    f"ALTER TABLE groups ADD COLUMN {setting} INTEGER NOT NULL DEFAULT 1"
+                )
+
+    if "selected_shift" not in existing_group_columns:
+        logger.info("Adding column 'selected_shift' to groups table")
+        cursor.execute("ALTER TABLE groups ADD COLUMN selected_shift TEXT DEFAULT NULL")
 
     conn.commit()
 
@@ -183,3 +198,51 @@ def get_all_groups():
     cursor.execute("SELECT group_id FROM groups")
     groups = cursor.fetchall()
     return [group['group_id'] for group in groups]
+
+
+def get_group_settings(group_id: int):
+    """Returns the entire settings row for a group, or None."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM groups WHERE group_id = ?", (group_id,))
+    return cursor.fetchone()
+
+
+def toggle_group_setting(group_id: int, setting: str) -> bool | None:
+    """Toggles a boolean setting for a group. Returns the new value, or None on error."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM groups WHERE group_id = ?", (group_id,))
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    try:
+        current = row[setting]
+    except (IndexError, KeyError):
+        return None
+    new_value = 0 if current else 1
+    cursor.execute(
+        f"UPDATE groups SET {setting} = ? WHERE group_id = ?",
+        (new_value, group_id),
+    )
+    conn.commit()
+    return bool(new_value)
+
+
+def set_group_shift(group_id: int, shift_name: str | None):
+    """Sets a shift filter for a group. None means all shifts."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE groups SET selected_shift = ? WHERE group_id = ?",
+        (shift_name, group_id),
+    )
+    conn.commit()
+
+
+def get_all_group_shift_filters() -> dict[int, str]:
+    """Returns {group_id: shift_name} for groups that have a shift filter set."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT group_id, selected_shift FROM groups WHERE selected_shift IS NOT NULL")
+    return {row["group_id"]: row["selected_shift"] for row in cursor.fetchall()}

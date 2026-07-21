@@ -36,12 +36,12 @@ async def show_districts(callback: CallbackQuery):
         text = f"📌 <b>{name}\nОбразовательные направления:</b>\n\n"
         programs = get_districts(name)
         districts_info = get_districts_info()
-        districts_names = list(districts_info.keys()) # pyright: ignore[reportOptionalMemberAccess]
+        districts_names = sorted(districts_info.keys())
         buttons = []
         if programs:
             for district, program in programs.items():
                 if district in districts_names:
-                    programs_names = list(districts_info[district]["programs"].keys()) # pyright: ignore[reportOptionalSubscript]
+                    programs_names = sorted(districts_info[district]["programs"].keys())
                     if program in programs_names:
                         buttons.append(InlineKeyboardButton(text=program, callback_data=f"direction_info:{districts_names.index(district)}:{programs_names.index(program)}:districts:{shift_index}"))
                 if district == "Информационные и компьютерные технологии":
@@ -62,15 +62,16 @@ async def show_spiski(callback: CallbackQuery):
         shift_index = int(data[1])
         name = get_old_data()[shift_index]["name"]
         spiski = get_spiski(name)
-        keys = sorted(spiski.keys()) # pyright: ignore[reportOptionalMemberAccess]
+        keys = sorted(spiski.keys())
         if len(data) == 2:
             text = f"📌 <b>{name}\nОбразовательные направления:</b>\n\n"
-            markup = get_regions_keyboard(shift_index, keys)
-            await callback.message.answer(text, parse_mode="HTML", reply_markup=markup)
+            regions_markup = get_regions_keyboard(shift_index, keys)
+            regions_markup.inline_keyboard.insert(-1, [InlineKeyboardButton(text="📋 Все списки", callback_data=f"spiski_all:{shift_index}")])
+            await callback.message.answer(text, parse_mode="HTML", reply_markup=regions_markup)
         elif len(data) == 3:
             district_index = int(data[2])
             text = f'😸 <b>Прошедшие на образовательное направление "{keys[district_index]}</b>":\n\n'
-            for person in spiski[keys[district_index]]: # pyright: ignore[reportOptionalSubscript]
+            for person in spiski[keys[district_index]]:
                 line = " ".join((person["surname"], person["name"], person["patronymic"]))
                 if user := get_user_by_name(person["name"], person["surname"]):
                     if user["username"]:
@@ -79,6 +80,32 @@ async def show_spiski(callback: CallbackQuery):
                         line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
                 line += "\n"
                 text += line
+            await callback.message.answer(text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=get_back_markup(f"shift-info:{shift_index}"))
+    await callback.answer()
+
+
+@schedule_router.callback_query(F.data.startswith("spiski_all:"))
+async def show_spiski_all(callback: CallbackQuery):
+    if callback.data and callback.message:
+        shift_index = int(callback.data.split(":")[1])
+        name = get_old_data()[shift_index]["name"]
+        spiski_data = get_spiski(name)
+        if not spiski_data:
+            await callback.answer()
+            return
+        keys = sorted(spiski_data.keys())
+
+        for district_key in keys:
+            text = f'😸 <b>Прошедшие на образовательное направление "{district_key}</b>":\n\n'
+            for person in spiski_data[district_key]:
+                line = " ".join((person["surname"], person["name"], person["patronymic"]))
+                if user := get_user_by_name(person["name"], person["surname"]):
+                    if user["username"]:
+                        line = f'<a href="https://t.me/{html.escape(user["username"])}">{html.escape(line)}</a>'
+                    elif user["id"]:
+                        line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
+                text += line + "\n"
+
             await callback.message.answer(text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=get_back_markup(f"shift-info:{shift_index}"))
     await callback.answer()
 
@@ -136,6 +163,16 @@ async def show_stats(callback: CallbackQuery):
         for region in regions:
             count = len(dopusheni_data[region])
             text += f"    {region}: {count}\n"
+        text += "\n"
+
+        from tools.competition import get_competition, get_competition_status
+        comp = get_competition(name)
+        if comp:
+            text += f"📈 <b>Средний конкурс:</b> {comp['overall']} чел/место\n\n"
+            text += "<b>По направлениям <i>(относительно среднего конкурса)</i>:</b>\n<blockquote expandable>"
+            for direction, competition in comp["per_direction"].items():
+                text += f"  {direction} — {get_competition_status(comp['overall'], competition)}\n"
+            text += f"</blockquote>\n🆕 Первашей: ~{comp['new_count']}"
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔍 Поиск по спискам", callback_data=f"search:{shift_index}")],

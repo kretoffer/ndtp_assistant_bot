@@ -18,7 +18,7 @@ class BroadcastState(StatesGroup):
 
 @broadcast_router.message(F.text == "/broadcast")
 async def broadcast_command(message: Message, state: FSMContext):
-    if message.from_user.id == config.admin_id: # pyright: ignore[reportOptionalMemberAccess]
+    if message.from_user and message.from_user.id == config.admin_id:
         await message.answer(config.messages.broadcast_start)
         await state.set_state(BroadcastState.waiting_for_broadcast_message)
     else:

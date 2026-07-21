@@ -10,6 +10,10 @@ class Messages:
                         "📌 Используйте /subscriptions чтобы настроить оповещения\n"\
                         "👀 Используйте /districts чтобы узнать побольше о направлениях\n"\
                         "🔍 Используйте /search чтобы найти человека во всех списках\n"\
+                        "🛠️ Используйте /group_settings чтобы настроить группу\n"\
+                        "🧑‍💻 Используйте /dists чтобы просмотреть дистанты\n"\
+                        "\n🎤 В группах поддерживается преобразование голосовых в текст\n"\
+                        "🔢 В группах доступен фильтр смен для уведомлений\n"\
                         "\n✏️ Чтобы поменять имя /edit_name"
     noname: str = "Если хочешь чтобы я искал тебя в списках и сообщал если найду, добавь свое имя через /edit_name"
     broadcast_start: str = "Начинаем рассылку. Отправьте сообщение, которое будет разослано всем пользователям."
@@ -26,6 +30,7 @@ class Messages:
 class Config:
     token: str
     admin_id: int
+    groq_api_key: str
     messages: Messages
     db_path: str = "data/database.db"
     log_path: str = "logs/log"
@@ -34,10 +39,16 @@ class Config:
     dopusheni_data_path = "data/dopusheni_data.json"
     spiski_data_path = "data/spiski_data.json"
     districts_info_path = "data/districts_info.json"
+    dists_data_path = "data/dists_data.json"
     parsing_interval = 60
     districts_parsing_interval = 1800
+    distance_parsing_interval = 3600
     search_cache_ttl: int = 300
     search_cache_cleanup_interval: int = 60
+    GROUP_SETTINGS = {
+        "voice_to_text": "Голосовые в текст",
+    }
+
     TOPIC_NAMES = {
         "new_removed_shifts": "Добавление/удаление смен",
         "dates": "Даты",
@@ -58,9 +69,11 @@ def load_config() -> Config:
     admin_id = os.getenv("ADMIN_ID")
     if not admin_id:
         raise ValueError("Haven't ADMIN_ID in .env")
+    groq_api_key = os.getenv("GROQ_API_KEY", "")
     return Config(
         token=token,
         admin_id=int(admin_id),
+        groq_api_key=groq_api_key,
         messages=Messages(),
         db_path=os.getenv("DB_PATH", "data/database.db"),
     )

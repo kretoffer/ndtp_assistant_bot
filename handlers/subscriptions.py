@@ -35,12 +35,12 @@ async def cmd_subscriptions(message: Message, config: Config):
 
 @subscriptions_router.callback_query(F.data.startswith("toggle_subscription:"))
 async def toggle_subscription_handler(callback_query: CallbackQuery, config: Config):
-    if not callback_query.message or not callback_query.from_user:
+    if not callback_query.message or not callback_query.from_user or not callback_query.data:
         return
 
     check_username(callback_query.from_user.id, callback_query.from_user.username)
 
-    topic = callback_query.data.split(":")[1] # pyright: ignore[reportOptionalMemberAccess]
+    topic = callback_query.data.split(":")[1]
 
     if topic not in config.TOPIC_NAMES:
         await callback_query.answer(

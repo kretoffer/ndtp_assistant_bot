@@ -2,7 +2,7 @@ import os
 import random
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, InaccessibleMessage
 
 from typing import Union
 
@@ -18,24 +18,27 @@ districts_router = Router()
 @districts_router.message(Command("districts"))
 @districts_router.callback_query(lambda c: c.data == "districts")
 async def districts(update: Union[Message, CallbackQuery]):
-    from_user, answer = get_from_user_and_answer_from_update(update) # pyright: ignore[reportAssignmentType]
+    from_user, _ = get_from_user_and_answer_from_update(update)
     if not from_user:
         return
-    if isinstance(update, CallbackQuery):
-        async def answer(text: str, reply_markup):
-            await update.message.answer(text=text, reply_markup=reply_markup) # pyright: ignore[reportOptionalMemberAccess]
-            await update.message.delete() # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
 
     check_username(from_user.id, from_user.username)
     text = "👀 Выберите направление о котором хотите узнать"
 
-    directions = get_districts_info().keys() # pyright: ignore[reportOptionalMemberAccess]
-    directions = sorted(directions)
+    directions = sorted(get_districts_info().keys())
+
     buttons = [InlineKeyboardButton(text=name, callback_data=f"direction_info:{id}") for id, name in enumerate(directions)]
     buttons.append(InlineKeyboardButton(text="🔙 Назад", callback_data="home"))
     markup = InlineKeyboardMarkup(inline_keyboard=[[button] for button in buttons])
 
-    await answer(text, reply_markup=markup)
+    if isinstance(update, CallbackQuery):
+        if not update.message:
+            return
+        await update.message.answer(text=text, reply_markup=markup)
+        if not isinstance(update.message, InaccessibleMessage):
+            await update.message.delete()
+    else:
+        await update.answer(text=text, reply_markup=markup)
 
 
 @districts_router.callback_query(F.data.startswith("direction_info:"))
@@ -47,10 +50,10 @@ async def direction_info(callback: CallbackQuery):
         direction_index = int(args[1])
 
         directions_info = get_districts_info()
-        directions = sorted(directions_info.keys()) # type: ignore
+        directions = sorted(directions_info.keys())
 
         direction_name = directions[direction_index]
-        direction = directions_info[direction_name] # pyright: ignore[reportOptionalSubscript]
+        direction = directions_info[direction_name]
 
         programs = direction["programs"]
         programs_names = sorted(programs.keys())
@@ -67,7 +70,8 @@ async def direction_info(callback: CallbackQuery):
             if direction["info"]:
                 text += f"\n\n{direction['info']}"
 
-            await callback.message.delete() # pyright: ignore[reportAttributeAccessIssue]
+            if callback.message and not isinstance(callback.message, InaccessibleMessage):
+                await callback.message.delete()
             await answer_with_random_img(callback.message.answer, callback.message.answer_photo, direction_name, text, markup)
 
         elif len(args) >= 3:
@@ -80,7 +84,8 @@ async def direction_info(callback: CallbackQuery):
             markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data=back)]])
 
             await callback.message.answer(text, parse_mode="HTML", reply_markup=markup)
-            await callback.message.delete() # pyright: ignore[reportAttributeAccessIssue]
+            if callback.message and not isinstance(callback.message, InaccessibleMessage):
+                await callback.message.delete()
 
     await callback.answer()
 

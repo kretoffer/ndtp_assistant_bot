@@ -3,7 +3,7 @@ import html
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
-from database import get_subscribers_by_topic, get_all_users, get_user_by_name, get_user_by_surname
+from database import get_subscribers_by_topic, get_all_users, get_user_by_name, get_user_by_surname, get_all_group_shift_filters
 
 logger = logging.getLogger(__name__)
 
@@ -67,29 +67,90 @@ def get_users_for_docs(docs: dict) -> set:
     return users
 
 
+def filter_changes_for_shift(changes: dict, shift_name: str) -> dict | None:
+    result = {"new_shifts": [], "removed_shifts": [], "modified_shifts": []}
+
+    for s in changes.get("new_shifts", []):
+        if s["name"] == shift_name:
+            result["new_shifts"].append(s)
+            break
+
+    for s in changes.get("removed_shifts", []):
+        if s["name"] == shift_name:
+            result["removed_shifts"].append(s)
+            break
+
+    for s in changes.get("modified_shifts", []):
+        if s["name"] == shift_name:
+            result["modified_shifts"].append(s)
+            break
+
+    if any(result.values()):
+        return result
+    return None
+
+
 async def notify_about_spiski(bot: Bot, spisok_info: dict):
     from parser import parse_new_spisok, get_districts
     spisok = await parse_new_spisok(spisok_info["link"], spisok_info["shift"], spisok_info["is_spiski"])
     for district_name, district in spisok.items():
         for person in district:
-            if user := get_user_by_name(person["name"], person["surname"]):
+            user = get_user_by_name(person["name"], person["surname"])
+            message = None
+            if user:
                 message = f"👋 Хей, {person['surname']} {person["name"]}, нашел тебя в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
                 if spisok_info['is_spiski']:
-                    district_dir = get_districts(spisok_info["shift"]).get(district_name) # pyright: ignore[reportOptionalMemberAccess]
+                    district_dir = get_districts(spisok_info["shift"]).get(district_name)
                     if district_dir and district_dir != district_name:
                         message += f" ({district_dir})"
-            elif user := get_user_by_surname(person["surname"]):
-                message = f"👋 Хей, нашел фамилию {person['surname']} в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
-            if user:
-                user_id = user["id"] # pyright: ignore[reportPossiblyUnboundVariable]
+            else:
+                user = get_user_by_surname(person["surname"])
+                if user:
+                    message = f"👋 Хей, нашел фамилию {person['surname']} в списках на {'поступление' if spisok_info['is_spiski'] else 'тесты'} в <b>{spisok_info['shift']}</b>\n\n{'📚 Профиль' if spisok_info["is_spiski"] else '🗺 Область'}: {district_name}"
+            if user and message:
+                user_id = user["id"]
                 try:
-                    await bot.send_message(user_id, message, parse_mode="HTML") # pyright: ignore[reportPossiblyUnboundVariable]
+                    await bot.send_message(user_id, message, parse_mode="HTML")
                 except TelegramForbiddenError:
                     logger.warning(f"User {user_id} has blocked the bot. Cannot send message.")
                 except TelegramBadRequest as e:
                     logger.error(f"Failed to send message to user {user_id}: {e}")
                 except Exception as e:
                     logger.error(f"An unexpected error occurred while sending message to user {user_id}: {e}")
+
+
+async def notify_groups_about_new_spiski(bot: Bot, spisok_info: dict):
+    if not spisok_info["is_spiski"]:
+        return
+    from parser import get_spiski
+    shift_name = spisok_info["shift"]
+    group_filters = get_all_group_shift_filters()
+    matching_groups = [gid for gid, sname in group_filters.items() if sname == shift_name]
+    if not matching_groups:
+        return
+
+    spisok_data = get_spiski(shift_name)
+    if not spisok_data:
+        return
+
+    for group_id in matching_groups:
+        for district_name in sorted(spisok_data.keys()):
+            text = f'😸 <b>Прошедшие на образовательное направление "{district_name}"</b>":\n\n'
+            for person in spisok_data[district_name]:
+                line = " ".join((person["surname"], person["name"], person["patronymic"]))
+                if user := get_user_by_name(person["name"], person["surname"]):
+                    if user["username"]:
+                        line = f'<a href="https://t.me/{html.escape(user["username"])}">{html.escape(line)}</a>'
+                    elif user["id"]:
+                        line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
+                text += line + "\n"
+
+            try:
+                await bot.send_message(group_id, text, parse_mode='HTML', disable_web_page_preview=True)
+            except TelegramForbiddenError:
+                logger.warning(f"Group {group_id} has blocked the bot.")
+            except TelegramBadRequest as e:
+                logger.error(f"Failed to send message to group {group_id}: {e}")
 
 
 async def notify_all_users(bot: Bot, changes, new_spiski):
@@ -104,13 +165,23 @@ async def notify_all_users(bot: Bot, changes, new_spiski):
         if "added_docs" in modified_shift["changes"]:
             users.update(get_users_for_docs(modified_shift["changes"]["added_docs"]))
     text = generate_message_text(changes)
+    group_filters = get_all_group_shift_filters()
     logger.info(f"Starting to send message to {len(users)} users.")
 
     for user in users:
         user_id = user["id"]
+
+        if user_id in group_filters:
+            filtered = filter_changes_for_shift(changes, group_filters[user_id])
+            if filtered is None:
+                continue
+            msg_text = generate_message_text(filtered)
+        else:
+            msg_text = text
+
         try:
             await bot.send_message(
-                user_id, text, parse_mode="HTML", disable_web_page_preview=True
+                user_id, msg_text, parse_mode="HTML", disable_web_page_preview=True
             )
         except TelegramForbiddenError:
             logger.warning(f"User {user_id} has blocked the bot. Cannot send message.")
@@ -123,6 +194,7 @@ async def notify_all_users(bot: Bot, changes, new_spiski):
 
     for spisok in new_spiski:
         await notify_about_spiski(bot, spisok)
+        await notify_groups_about_new_spiski(bot, spisok)
 
     logger.info("Finished sending messages to all users.")
 

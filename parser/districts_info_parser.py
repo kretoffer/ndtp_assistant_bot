@@ -35,14 +35,14 @@ async def parse_main_page(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
     sub_page_links = []
 
-    educational_blocks = soup.find_all('div', class_=lambda c: c and 'educational' in c.split()) # pyright: ignore[reportArgumentType, reportCallIssue]
+    educational_blocks = soup.find_all('div', class_=lambda c: isinstance(c, str) and 'educational' in c.split())
 
     for block in educational_blocks:
         link = block.find('a', class_='fusion-column-anchor')
         title_h1 = block.find('h1', class_='title-heading-left')
 
         if link and 'href' in link.attrs and title_h1:
-            href = link['href']
+            href = str(link['href'])
             if href.startswith(MAIN_PAGE_URL) and href != MAIN_PAGE_URL:
                 sub_page_links.append({
                     "url": href,
@@ -125,7 +125,7 @@ async def parse_and_compare_districts(bot: Bot):
 
     old_data = parser.get_districts_info()
 
-    changes = compare(old_data, new_data) # pyright: ignore[reportArgumentType]
+    changes = compare(old_data, new_data)
 
     logger.info(f"Districts changes: {changes}")
 
