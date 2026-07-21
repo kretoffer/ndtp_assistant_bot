@@ -169,10 +169,10 @@ async def show_stats(callback: CallbackQuery):
         comp = get_competition(name)
         if comp:
             text += f"📈 <b>Средний конкурс:</b> {comp['overall']} чел/место\n\n"
-            text += "<b>По направлениям <i>(относительно среднего конкурса)</i>:</b>\n"
+            text += "<b>По направлениям <i>(относительно среднего конкурса)</i>:</b>\n<blockquote expandable>"
             for direction, competition in comp["per_direction"].items():
                 text += f"  {direction} — {get_competition_status(comp['overall'], competition)}\n"
-            text += f"\n🆕 Первашей: ~{comp['new_count']}"
+            text += f"</blockquote>\n🆕 Первашей: ~{comp['new_count']}"
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔍 Поиск по спискам", callback_data=f"search:{shift_index}")],
