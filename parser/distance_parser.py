@@ -37,6 +37,7 @@ def _split_full_name(full_name: str) -> tuple[str, str, str]:
 
 def _normalize_name(name: str) -> str:
     name = name.strip().strip().replace("(", " ").replace(")", " ")
+    name = name.replace("«", "").replace("»", "")
     name = name.replace("ё", "е").replace("Ё", "Е")
     name = re.sub(r"(?<=[а-я])-(?=[а-я])", "", name)
     name = re.sub(r"\s+", " ", name).strip()
