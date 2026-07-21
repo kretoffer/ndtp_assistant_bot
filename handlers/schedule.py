@@ -163,6 +163,16 @@ async def show_stats(callback: CallbackQuery):
         for region in regions:
             count = len(dopusheni_data[region])
             text += f"    {region}: {count}\n"
+        text += "\n"
+
+        from tools.competition import get_competition, get_competition_status
+        comp = get_competition(name)
+        if comp:
+            text += f"📈 <b>Средний конкурс:</b> {comp['overall']} чел/место\n\n"
+            text += "<b>По направлениям <i>(относительно среднего конкурса)</i>:</b>\n"
+            for direction, competition in comp["per_direction"].items():
+                text += f"  {direction} — {get_competition_status(comp['overall'], competition)}\n"
+            text += f"\n🆕 Первашей: ~{comp['new_count']}"
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔍 Поиск по спискам", callback_data=f"search:{shift_index}")],

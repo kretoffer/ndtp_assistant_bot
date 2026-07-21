@@ -82,6 +82,9 @@ async def init_parser(old_data_path: str, districts_data_path: str, dopusheni_da
         districts_info = await parse_educational_directions()
         save_districts_info()
 
+    from tools.competition import recalculate as recalculate_competition
+    recalculate_competition()
+
 
 def save_old_data():
     if not _old_data_path:
@@ -483,6 +486,8 @@ async def parse_new_spisok(url: str, shift_name: str, is_spiski = False):
     spisok[shift_name] = await parse_spisok(url, is_spiski)
     save_dopusheni_data()
     save_spiski_data()
+    from tools.competition import recalculate as recalculate_competition
+    recalculate_competition()
     return spisok[shift_name]
 
 
