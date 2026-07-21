@@ -2,7 +2,7 @@ import os
 import random
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, InaccessibleMessage
 
 from typing import Union
 
@@ -23,8 +23,11 @@ async def districts(update: Union[Message, CallbackQuery]):
         return
     if isinstance(update, CallbackQuery):
         async def answer(text: str, reply_markup):
-            await update.message.answer(text=text, reply_markup=reply_markup) # pyright: ignore[reportOptionalMemberAccess]
-            await update.message.delete() # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+            if not update.message:
+                return
+            await update.message.answer(text=text, reply_markup=reply_markup)
+            if not isinstance(update.message, InaccessibleMessage):
+                await update.message.delete()
 
     check_username(from_user.id, from_user.username)
     text = "👀 Выберите направление о котором хотите узнать"
@@ -67,7 +70,8 @@ async def direction_info(callback: CallbackQuery):
             if direction["info"]:
                 text += f"\n\n{direction['info']}"
 
-            await callback.message.delete() # pyright: ignore[reportAttributeAccessIssue]
+            if callback.message and not isinstance(callback.message, InaccessibleMessage):
+                await callback.message.delete()
             await answer_with_random_img(callback.message.answer, callback.message.answer_photo, direction_name, text, markup)
 
         elif len(args) >= 3:
@@ -80,7 +84,8 @@ async def direction_info(callback: CallbackQuery):
             markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data=back)]])
 
             await callback.message.answer(text, parse_mode="HTML", reply_markup=markup)
-            await callback.message.delete() # pyright: ignore[reportAttributeAccessIssue]
+            if callback.message and not isinstance(callback.message, InaccessibleMessage):
+                await callback.message.delete()
 
     await callback.answer()
 

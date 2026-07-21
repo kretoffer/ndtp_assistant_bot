@@ -2,7 +2,7 @@ import html
 
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup, InaccessibleMessage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
@@ -209,7 +209,10 @@ async def search_page_handler(callback: CallbackQuery):
     text = _build_search_text(query, total, chunk, page, shift_names)
     markup = _build_search_markup(shift_index, total, page, chunk, start)
 
-    await callback.message.edit_text(text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup) # pyright: ignore[reportAttributeAccessIssue]
+    if isinstance(callback.message, InaccessibleMessage):
+        await callback.message.answer(text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup)
+    else:
+        await callback.message.edit_text(text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup)
     await callback.answer()
 
 
@@ -239,5 +242,8 @@ async def profile_handler(callback: CallbackQuery):
     text += f"\n\n<i>Поиск проходил по спискам: {', '.join(html.escape(s) for s in shift_names)}</i>"
     back_page = entry.get("current_page", 0)
     markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 К результатам", callback_data=f"search_page:{back_page}")]])
-    await callback.message.edit_text(text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup) # pyright: ignore[reportAttributeAccessIssue]
+    if isinstance(callback.message, InaccessibleMessage):
+        await callback.message.answer(text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup)
+    else:
+        await callback.message.edit_text(text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup)
     await callback.answer()
