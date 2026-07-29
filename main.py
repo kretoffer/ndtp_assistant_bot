@@ -17,7 +17,6 @@ from handlers import (
     districts_router,
     broadcast_router,
     errors_router,
-    fallback_router,
     voice_router,
     dists_router,
 )
@@ -75,7 +74,6 @@ async def main():
     dp.include_router(dists_router)
     dp.include_router(errors_router)
     dp.include_router(voice_router)
-    dp.include_router(fallback_router)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
