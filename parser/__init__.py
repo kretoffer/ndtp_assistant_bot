@@ -17,6 +17,15 @@ from tools.retry import retry as _retry
 logger = logging.getLogger(__name__)
 
 
+def _normalize_shift_name(name: str) -> str:
+    """Normalize shift name by removing leading year and extra whitespace."""
+    if not name:
+        return ""
+    name = re.sub(r"^20\d{2}\s+", "", name)
+    name = re.sub(r"\s+", " ", name).strip()
+    return name
+
+
 _old_data_path = None
 _districts_data_path = None
 _dopusheni_data_path = None
@@ -197,8 +206,8 @@ def compare(new_data: list):
 
     changes = {"new_shifts": [], "removed_shifts": [], "modified_shifts": []}
 
-    old_shifts_dict = {shift["name"]: shift for shift in old_data}
-    new_shifts_dict = {shift["name"]: shift for shift in new_data}
+    old_shifts_dict = {_normalize_shift_name(shift["name"]): shift for shift in old_data}
+    new_shifts_dict = {_normalize_shift_name(shift["name"]): shift for shift in new_data}
 
     old_shift_names = set(old_shifts_dict.keys())
     new_shift_names = set(new_shifts_dict.keys())
@@ -231,7 +240,7 @@ def compare(new_data: list):
         for doc in added_docs:
             if doc.startswith(SPISKI_DOPUSCHENNYH_START_WITH) or doc.startswith(SPISKI_START_WITH):
                 new_spiski.append({
-                    "shift": name,
+                    "shift": new_shift["name"],
                     "doc": doc,
                     "link": new_shift["docs"][doc],
                     "is_spiski": doc.startswith(SPISKI_START_WITH)
@@ -258,7 +267,7 @@ def compare(new_data: list):
             modifications["doc_url_changes"] = doc_url_changes
 
         if modifications:
-            changes["modified_shifts"].append({"name": name, "changes": modifications})
+            changes["modified_shifts"].append({"name": new_shift["name"], "changes": modifications})
 
     if any(changes.values()):
         old_data = new_data
@@ -271,6 +280,9 @@ def compare(new_data: list):
 async def parse_and_compare(bot: Bot):
     global districts
     new_data = await parse()
+    if not new_data:
+        logger.warning("Parse returned empty data, skipping comparison")
+        return
     changes = compare(new_data)
     logger.info(f"Changes: {changes}")
     if changes:
