@@ -152,6 +152,7 @@ async def parse() -> list:
 
         name = ""
         date = ""
+        feed = ""
 
         if len(columns) > 0:
             name_tag = columns[0].find("h1")
@@ -162,35 +163,51 @@ async def parse() -> list:
             date_tag = columns[1].find("h1")
             if date_tag:
                 date = date_tag.text.strip()
-                year_match = re.search(r'\b(20\d{2})\b', date)
-                if year_match:
-                    year = year_match.group(1)
-                    name = f"{year} {name}"
 
-        feed = ""
         panel_body = panel.find("div", class_="panel-body")
         if panel_body:
-            feed_tag = panel_body.find("p")
-            if feed_tag and "Прием заявок" in feed_tag.text:
-                feed = (
-                    feed_tag.text.strip()
-                    .replace("Прием заявок", "")
-                    .strip()
-                    .split("\n")[0]
-                )
+            body_text = panel_body.get_text(" ", strip=True)
 
-            for doc_link in panel_body.find_all("a"):
-                doc_name = doc_link.text.strip()
-                doc_href_raw = doc_link.get("href")
-                if isinstance(doc_href_raw, list):
-                    doc_href = doc_href_raw[0]
-                else:
-                    doc_href = doc_href_raw
+            # Extract actual educational dates from panel-body (before "Подачи нет")
+            # Format: "11.01.2027 — 03.02.2027 Подачи нет Прием заявок 21.09.2026 – 05.10.2026"
+            if date == "Прием заявки" or date == "Прием заявок":
+                # Try to extract dates from body_text before "Подачи нет"
+                date_match = re.search(r'(\d{2}\.\d{2}\.\d{4}\s*[–—]\s*\d{2}\.\d{2}\.\d{4})', body_text)
+                if date_match:
+                    date = date_match.group(1).replace("—", "–")
 
-                if doc_href and not doc_href.startswith("http"):
-                    doc_href = "https://ndtp.by" + doc_href
-                if doc_href:
-                    docs[doc_name] = doc_href
+            # Extract feed (application period) from "Прием заявок ..."
+            # Handles both formats: "Прием заявки 21.09.2026 – 05.10.2026" and "Прием заявки с 30.03 по 13.04.2026г."
+            feed_match = re.search(r'Прием заявок\s*([\d\.\s–—]+|с\s+.+?по\s+\d{2}\.\d{2}\.\d{4}г\.?)', body_text)
+            if feed_match:
+                feed = feed_match.group(1).strip().replace("—", "–")
+
+        # Extract year: try date, then feed, then name
+        if name and not re.match(r'^20\d{2}\s+', name):
+            year = None
+            for source in [date, feed, name]:
+                year_match = re.search(r'\b(20\d{2})\b', source)
+                if year_match:
+                    year = year_match.group(1)
+                    break
+            if year:
+                # Remove existing year from name if present (e.g., "Смена 2027" -> "Смена")
+                name = re.sub(r'\b20\d{2}\b', '', name).strip()
+                name = re.sub(r'\s+', ' ', name).strip()
+                name = f"{year} {name}"
+            if panel_body:
+                for doc_link in panel_body.find_all("a"):
+                    doc_name = doc_link.text.strip()
+                    doc_href_raw = doc_link.get("href")
+                    if isinstance(doc_href_raw, list):
+                        doc_href = doc_href_raw[0]
+                    else:
+                        doc_href = doc_href_raw
+
+                    if doc_href and not doc_href.startswith("http"):
+                        doc_href = "https://ndtp.by" + doc_href
+                    if doc_href:
+                        docs[doc_name] = doc_href
 
         if name:
             schedule.append({"name": name, "date": date, "feed": feed, "docs": docs})
