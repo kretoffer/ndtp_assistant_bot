@@ -228,7 +228,7 @@ async def notify_about_directions(bot: Bot, changes):
         return text
 
     text = generate_text(changes)
-    users = [{"id":1917247858}]#get_subscribers_by_topic("directions")
+    users = get_subscribers_by_topic("directions")
 
     for user in users:
         user_id = user["id"]

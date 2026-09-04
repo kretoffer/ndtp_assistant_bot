@@ -45,7 +45,7 @@ def init_db(topic_names: dict | None = None, group_settings: dict | None = None)
             dopusheni BOOLEAN NOT NULL DEFAULT 1,
             mesta_provedeniya BOOLEAN NOT NULL DEFAULT 1,
             spiski BOOLEAN NOT NULL DEFAULT 1,
-            directions NOT NULL DEFAULT 0
+            directions NOT NULL DEFAULT 1
         )
     """)
     cursor.execute("""

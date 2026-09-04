@@ -57,7 +57,7 @@ class Config:
         "mesta_provedeniya": "Места проведения",
         "spiski": "Поступившие",
         "application_reminders": "Напоминания о подаче заявок",
-        #"directions": "Образовательные программы"
+        "directions": "Образовательные программы"
     }
 
 
