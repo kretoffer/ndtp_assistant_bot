@@ -8,9 +8,10 @@ import html
 from keyboards.schedule_keyboards import get_schedule_keyboard, get_regions_keyboard
 from keyboards import get_back_button, get_back_markup
 from parser import get_old_data, get_districts, get_spiski, get_dopusheni, get_districts_info
-from database import get_user_by_name, check_username, add_user
+from database import check_username, add_user
 
 from tools import get_from_user_and_answer_from_update
+from tools.profile import format_person_name
 
 
 schedule_router = Router()
@@ -72,14 +73,15 @@ async def show_spiski(callback: CallbackQuery):
             district_index = int(data[2])
             text = f'😸 <b>Прошедшие на образовательное направление "{keys[district_index]}</b>":\n\n'
             for person in spiski[keys[district_index]]:
-                line = " ".join((person["surname"], person["name"], person["patronymic"]))
-                if user := get_user_by_name(person["name"], person["surname"]):
-                    if user["username"]:
-                        line = f'<a href="https://t.me/{html.escape(user["username"])}">{html.escape(line)}</a>'
-                    elif user["id"]:
-                        line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
-                line += "\n"
-                text += line
+                line = format_person_name(
+                    person["surname"],
+                    person["name"],
+                    person["patronymic"],
+                    bold=False,
+                    icon=None,
+                    link_type="bot",
+                )
+                text += line + "\n"
             await callback.message.answer(text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=get_back_markup(f"shift-info:{shift_index}"))
     await callback.answer()
 
@@ -98,12 +100,14 @@ async def show_spiski_all(callback: CallbackQuery):
         for district_key in keys:
             text = f'😸 <b>Прошедшие на образовательное направление "{district_key}</b>":\n\n'
             for person in spiski_data[district_key]:
-                line = " ".join((person["surname"], person["name"], person["patronymic"]))
-                if user := get_user_by_name(person["name"], person["surname"]):
-                    if user["username"]:
-                        line = f'<a href="https://t.me/{html.escape(user["username"])}">{html.escape(line)}</a>'
-                    elif user["id"]:
-                        line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
+                line = format_person_name(
+                    person["surname"],
+                    person["name"],
+                    person["patronymic"],
+                    bold=False,
+                    icon=None,
+                    link_type="bot",
+                )
                 text += line + "\n"
 
             await callback.message.answer(text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=get_back_markup(f"shift-info:{shift_index}"))

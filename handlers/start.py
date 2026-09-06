@@ -3,7 +3,7 @@ from typing import Union
 
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery, InaccessibleMessage
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
@@ -11,6 +11,9 @@ from config import Config
 from database import add_user, check_username, get_user_by_id, update_user_name
 from keyboards.cancel_keyboard import cancel_keyboard
 from tools import get_from_user_and_answer_from_update
+from tools.profile import build_profile_text
+from keyboards import get_back_button
+from aiogram.types import InlineKeyboardMarkup
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +28,33 @@ start_router = Router()
 
 @start_router.message(Command("start"))
 @start_router.callback_query(lambda c: c.data == "home")
-async def cmd_start(update: Union[Message, CallbackQuery], config: Config, state: FSMContext):
+async def cmd_start(update: Union[Message, CallbackQuery], config: Config, state: FSMContext, command: CommandObject | None = None):
     from_user, answer = get_from_user_and_answer_from_update(update)
 
     if not from_user or not answer:
         return
+
+    # Handle deep link: /start profile_<surname>_<name>[_<patronymic>]
+    if isinstance(update, Message) and command and command.args:
+        args = command.args
+        if args.startswith("profile_"):
+            add_user(from_user.id, from_user.username)
+
+            slug = args[len("profile_"):]
+            parts = slug.split("_")
+
+            if len(parts) >= 2:
+                from urllib.parse import unquote
+                surname = unquote(parts[0])
+                name = unquote(parts[1])
+                # patronymic = unquote(parts[2]) if len(parts) > 2 else ""
+
+                text = build_profile_text(surname, name)
+                markup = InlineKeyboardMarkup(inline_keyboard=[[get_back_button("home")]])
+                await answer(text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup)
+            else:
+                await answer("Неверный формат ссылки на профиль.")
+            return
 
     add_user(from_user.id, from_user.username)
     user = get_user_by_id(from_user.id)

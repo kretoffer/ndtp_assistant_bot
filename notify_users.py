@@ -1,9 +1,11 @@
 import logging
 import html
+from urllib.parse import quote
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from database import get_subscribers_by_topic, get_all_users, get_user_by_name, get_user_by_surname, get_all_group_shift_filters
+from config import BOT_USERNAME
 
 logger = logging.getLogger(__name__)
 
@@ -137,12 +139,15 @@ async def notify_groups_about_new_spiski(bot: Bot, spisok_info: dict):
         for district_name in sorted(spisok_data.keys()):
             text = f'😸 <b>Прошедшие на образовательное направление "{district_name}"</b>":\n\n'
             for person in spisok_data[district_name]:
-                line = " ".join((person["surname"], person["name"], person["patronymic"]))
-                if user := get_user_by_name(person["name"], person["surname"]):
-                    if user["username"]:
-                        line = f'<a href="https://t.me/{html.escape(user["username"])}">{html.escape(line)}</a>'
-                    elif user["id"]:
-                        line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
+                surname = person["surname"]
+                name = person["name"]
+                patronymic = person.get("patronymic", "")
+                full_name = " ".join(filter(None, (surname, name, patronymic)))
+                slug = f"profile_{quote(surname)}_{quote(name)}"
+                if patronymic:
+                    slug += f"_{quote(patronymic)}"
+                url = f"https://t.me/{BOT_USERNAME}?start={slug}"
+                line = f'<a href="{url}">{html.escape(full_name)}</a>'
                 text += line + "\n"
 
             try:

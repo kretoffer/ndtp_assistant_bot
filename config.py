@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 
 
+BOT_USERNAME = "ndtp_assistant_bot"
+
+
 @dataclass
 class Messages:
     start_phrase: str = "👋 Привет! Я ндтп ассистент, могу сообщать о изменениях в списках, искать вас в списках, помочь написать проект и ответить на вопросы\n\n"\
