@@ -1,12 +1,8 @@
 import html
-from typing import Literal
-from urllib.parse import quote
 
 from database import get_user_by_name
 from parser import get_dopusheni, get_spiski
 from parser.distance_parser import get_distance_students
-
-from config import BOT_USERNAME
 
 
 def format_person_name(
@@ -17,30 +13,18 @@ def format_person_name(
     bold: bool = True,
     icon: str | None = "👤",
     user: dict | None = None,
-    link_type: Literal["telegram", "bot", "none"] = "telegram",
 ) -> str:
     full_name = " ".join(filter(None, (surname, name, patronymic)))
     if user is None:
         user = get_user_by_name(name, surname)
-
-    if link_type == "bot":
-        slug = f"profile_{quote(surname)}_{quote(name)}"
-        if patronymic:
-            slug += f"_{quote(patronymic)}"
-        url = f"https://t.me/{BOT_USERNAME}?start={slug}"
-        name_part = f'<a href="{url}">{html.escape(full_name)}</a>'
-    elif link_type == "telegram":
-        if user and user["username"]:
-            if user["username"]:
-                url = f'https://t.me/{html.escape(user["username"])}'
-            else:
-                url = f'tg://user?id={html.escape(str(user["id"]))}'
-            name_part = f'<a href="{url}">{html.escape(full_name)}</a>'
+    if user and user["username"]:
+        if user["username"]:
+            url = f'https://t.me/{html.escape(user["username"])}'
         else:
-            name_part = html.escape(full_name)
+            url = f'tg://user?id={html.escape(str(user["id"]))}'
+        name_part = f'<a href="{url}">{html.escape(full_name)}</a>'
     else:
         name_part = html.escape(full_name)
-
     if bold:
         name_part = f"<b>{name_part}</b>"
     if icon:

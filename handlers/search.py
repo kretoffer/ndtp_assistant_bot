@@ -11,7 +11,7 @@ from keyboards.cancel_keyboard import cancel_keyboard
 from parser import get_old_data
 from database import get_user_by_name, check_username, add_user
 from tools.search import search_persons
-from tools.profile import build_profile_text, format_person_name
+from tools.profile import build_profile_text
 from tools.search_cache import store as _store_search, get as _get_search, update_page as _update_page
 
 
@@ -25,11 +25,13 @@ class SearchState(StatesGroup):
 
 
 def _format_person_line(person: dict) -> str:
-    surname = person.get("surname") or ""
-    name = person.get("name") or ""
-    patronymic = person.get("patronymic") or ""
-    user = get_user_by_name(name, surname)
-    return format_person_name(surname, name, patronymic, user=user, link_type="bot", icon=None)
+    line = " ".join(((person.get("surname") or ""), (person.get("name") or ""), (person.get("patronymic") or "")))
+    if user := get_user_by_name(person.get("name") or "", person.get("surname") or ""):
+        if user["username"]:
+            line = f'<a href="https://t.me/{html.escape(user["username"])}">{html.escape(line)}</a>'
+        elif user["id"]:
+            line = f'<a href="tg://user?id={html.escape(str(user["id"]))}">{html.escape(line)}</a>'
+    return html.escape(line) if line == html.escape(line) else line
 
 
 def _build_search_text(query: str, total: int, chunk: list[dict], page: int, shift_names: list[str]) -> str:
@@ -78,6 +80,13 @@ def _build_search_text(query: str, total: int, chunk: list[dict], page: int, shi
 def _build_search_markup(shift_index: int | None, total: int, current_page: int, chunk: list[dict], offset: int) -> InlineKeyboardMarkup:
     pages = (total + PAGE_SIZE - 1) // PAGE_SIZE
     buttons = []
+
+    for i, r in enumerate(chunk):
+        idx = offset + i
+        p = r["person"]
+        surname = (p.get("surname") or "?")[:20]
+        name_initial = (p.get("name") or "?")[0]
+        buttons.append([InlineKeyboardButton(text=f"👤 {surname} {name_initial}.", callback_data=f"profile:{idx}")])
 
     pagination_row = []
     if current_page > 0:

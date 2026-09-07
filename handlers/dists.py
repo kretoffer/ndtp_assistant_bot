@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKe
 from keyboards import get_back_button
 from database import check_username, add_user
 from parser.distance_parser import get_distance_students
-from tools.profile import build_profile_text, format_person_name
+from tools.profile import build_profile_text
 
 
 dists_router = Router()
@@ -56,15 +56,8 @@ def _build_dir_text(direction: str, students: list[dict], page: int) -> str:
 
     lines = [f"📌 <b>{html.escape(direction)}</b>\n"]
     for s in chunk:
-        name_part = format_person_name(
-            s.get("surname", ""),
-            s.get("name", ""),
-            s.get("patronymic", ""),
-            bold=False,
-            icon=None,
-            link_type="bot",
-        )
-        lines.append(f"  • {name_part}")
+        fio = " ".join(filter(None, (s["surname"], s["name"], s["patronymic"])))
+        lines.append(f"  • {html.escape(fio)}")
         if s.get("project"):
             lines.append(f"    🔬 {html.escape(s['project'])}")
         lines.append(f"    📅 {html.escape(s.get('study_period', ''))}")
@@ -76,7 +69,18 @@ def _build_dir_text(direction: str, students: list[dict], page: int) -> str:
 def _build_dir_markup(dir_idx: int, students: list[dict], page: int) -> InlineKeyboardMarkup:
     total = len(students)
     pages = (total + PAGE_SIZE - 1) // PAGE_SIZE
+    start = page * PAGE_SIZE
+    chunk = students[start:start + PAGE_SIZE]
     buttons = []
+
+    for i, s in enumerate(chunk):
+        offset = start + i
+        surname = (s.get("surname") or "?")[:20]
+        name_initial = (s.get("name") or "?")[0]
+        buttons.append([InlineKeyboardButton(
+            text=f"👤 {surname} {name_initial}.",
+            callback_data=f"dists_person:{dir_idx}:{offset}",
+        )])
 
     pagination_row = []
     if page > 0:
